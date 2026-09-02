@@ -127,7 +127,9 @@ def build_map(
             roster.remote.append(employee)
         elif booking.mode == Mode.vacation:
             roster.vacation.append(employee)
-        elif booking.mode == Mode.presencial and booking.status == BookingStatus.waitlisted:
+        elif booking.mode == Mode.presencial and booking.status != BookingStatus.assigned:
+            # waitlisted — or status=None, the inconsistent state left behind
+            # if a resolve_day run was interrupted; show it, don't drop it.
             roster.waitlisted.append(employee)
         # presencial + assigned is already represented by the desk boxes above.
 

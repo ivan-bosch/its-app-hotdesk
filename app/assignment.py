@@ -33,6 +33,7 @@ import os
 import threading
 from datetime import date, datetime, time
 
+from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
@@ -136,7 +137,7 @@ def _distance(a: Desk, b: Desk) -> float:
 
 def _seniority_score(employee: Employee, today: date | None = None) -> float:
     """Years of seniority since `hire_date`, used purely as a priority
-    tie-break when two employees want the same favorite  more yearsdesk 
+    tie-break when two employees want the same favorite desk: more years
     wins. No `hire_date` set -> 0 (loses to anyone with recorded seniority)."""
     if not employee.hire_date:
         return 0.0
@@ -248,6 +249,7 @@ def _resolve_day(session: Session, day: date) -> None:
             key=lambda eid: (
                 _seniority_score(employees[eid]),
                 -by_employee[eid].created_at.timestamp(),
+                eid,  # last-resort tie-break: keep the winner deterministic
             ),
         )
         place(winner_id, all_desks[desk_id])
@@ -518,6 +520,8 @@ def _book_day(session: Session, employee: Employee, day: date, mode: Mode) -> Bo
     else:
         session.rollback()
         booking = _existing_booking(session, employee, day)
+        if booking is None:
+            raise HTTPException(status_code=503, detail="Could not record the booking, please retry")
 
     session.expire_all()  # resolve_day must read committed state, not stale objects
     resolve_day(session, day)

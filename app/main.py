@@ -61,7 +61,7 @@ def login_submit(request: Request, email: str = Form(...), session: Session = De
 
 
 @app.get("/auth/verify")
-def auth_verify(token: str, session: Session = Depends(get_session)):
+def auth_verify(request: Request, token: str, session: Session = Depends(get_session)):
     employee = verify_token(session, token)
     target = "/profile" if not employee.profile_complete else "/calendar"
     response = RedirectResponse(target)
@@ -71,6 +71,7 @@ def auth_verify(token: str, session: Session = Depends(get_session)):
         max_age=SESSION_MAX_AGE,
         httponly=True,
         samesite="lax",
+        secure=request.url.scheme == "https",
     )
     return response
 
@@ -197,6 +198,8 @@ def calendar_book(
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid mode") from None
     booking_day = parse_day(day)
+    if booking_day not in upcoming_weekdays():
+        raise HTTPException(status_code=400, detail="Day is outside the booking window")
     try:
         booking = book_day(session, employee, booking_day, booking_mode)
     except DayLockedError as exc:

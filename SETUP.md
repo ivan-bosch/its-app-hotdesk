@@ -143,17 +143,17 @@ el enlace mágico.
 
 ## 5. El bloqueo diario de elecciones (`BOOKING_LOCK_HOUR`)
 
-La asignacinnn de escritorios es **instantnea**: marcar un d como
+La asignación de escritorios es **instantánea**: marcar un día como
 "presencial" asigna (o reasigna) escritorio en el momento, recalculando el
-d entero con el algoritmo de
-[`ALGORITHM.md`](ALGORITHM.md). No hay ningn job programado ni estado
+día entero con el algoritmo de
+[`ALGORITHM.md`](ALGORITHM.md). No hay ningún job programado ni estado
 "pendiente".
 
-Lo nico configurable es la **hora de cierre**: a partir de las
-`BOOKING_LOCK_HOUR`:00 de cada d (hora local del servidor), ese d queda
-bloqueado y los empleados ya no pueden cambiar su eleccinnn (ni presencial,
-ni remoto, ni vacaciones). Los ds futuros siguen abiertos, y el admin
-siempre puede reasignar manualmente desde `/admin/reassign`, incluso despus
+Lo único configurable es la **hora de cierre**: a partir de las
+`BOOKING_LOCK_HOUR`:00 de cada día (hora local del servidor), ese día queda
+bloqueado y los empleados ya no pueden cambiar su elección (ni presencial,
+ni remoto, ni vacaciones). Los días futuros siguen abiertos, y el admin
+siempre puede reasignar manualmente desde `/admin/reassign`, incluso después
 del cierre.
 
 - Valor por defecto: `8` (las 08:00). Solo admite horas enteras (0-23):

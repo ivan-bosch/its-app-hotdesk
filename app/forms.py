@@ -17,3 +17,13 @@ def parse_day(value: str) -> date:
         return date.fromisoformat(value)
     except ValueError:
         raise HTTPException(status_code=400, detail=f"Invalid date: {value!r}") from None
+
+
+def parse_date(value: str) -> date | None:
+    """Optional ISO date form field: "" means "not set", garbage is a 400."""
+    if not value:
+        return None
+    try:
+        return date.fromisoformat(value)
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"Invalid date: {value!r}") from None

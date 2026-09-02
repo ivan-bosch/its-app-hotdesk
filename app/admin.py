@@ -7,6 +7,7 @@ from datetime import date
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
 from app.admin_auth import (
@@ -16,10 +17,10 @@ from app.admin_auth import (
     current_admin,
     make_admin_session_cookie,
 )
-from app.assignment import admin_reassign
+from app.assignment import admin_reassign, promote_waitlist
 from app.dates import resolve_target_day, upcoming_weekdays
 from app.db import get_session
-from app.forms import parse_day, parse_optional_int
+from app.forms import parse_date, parse_day, parse_optional_int
 from app.models import AdminUser, Booking, BookingStatus, Desk, Employee, MagicLink, Mode, Team
 from app.security import hash_password, verify_password
 from app.templating import templates
@@ -54,6 +55,7 @@ def admin_login_submit(
         max_age=ADMIN_SESSION_MAX_AGE,
         httponly=True,
         samesite="lax",
+        secure=request.url.scheme == "https",
     )
     return response
 
@@ -126,7 +128,7 @@ def _apply_employee_form(
     employee.surname = surname.strip() or None
     employee.team_id = parse_optional_int(team_id)
     employee.is_boss = is_boss
-    employee.hire_date = date.fromisoformat(hire_date) if hire_date else None
+    employee.hire_date = parse_date(hire_date)
 
 
 @router.get("/employees", response_class=HTMLResponse)
@@ -164,7 +166,11 @@ def admin_employees_add(
     employee = Employee(email=email)
     _apply_employee_form(employee, name, surname, team_id, is_boss, hire_date)
     session.add(employee)
-    session.commit()
+    try:
+        session.commit()
+    except IntegrityError:
+        session.rollback()
+        raise HTTPException(status_code=400, detail="An employee with that email already exists") from None
     return RedirectResponse("/admin/employees", status_code=303)
 
 
@@ -213,12 +219,18 @@ def admin_employees_delete(
 ):
     employee = session.get(Employee, employee_id)
     if employee:
-        for booking in session.exec(select(Booking).where(Booking.employee_id == employee_id)).all():
+        bookings = session.exec(select(Booking).where(Booking.employee_id == employee_id)).all()
+        affected_days = {b.day for b in bookings}
+        for booking in bookings:
             session.delete(booking)
         for link in session.exec(select(MagicLink).where(MagicLink.email == employee.email)).all():
             session.delete(link)
         session.delete(employee)
         session.commit()
+        # A freed desk must not sit empty: re-evaluate each affected day's
+        # waitlist (like admin_reassign, without reshuffling seated people).
+        for day in affected_days:
+            promote_waitlist(session, day)
     return RedirectResponse("/admin/employees", status_code=303)
 
 
@@ -255,6 +267,8 @@ def admin_teams_add(
         raise HTTPException(status_code=400, detail="Team name is required")
     if session.exec(select(Team).where(Team.name == name)).first():
         raise HTTPException(status_code=400, detail="A team with that name already exists")
+    if is_helpdesk and session.exec(select(Team).where(Team.is_helpdesk == True)).first():  # noqa: E712
+        raise HTTPException(status_code=400, detail="A help desk team already exists")
     session.add(Team(name=name, is_helpdesk=is_helpdesk))
     session.commit()
     return RedirectResponse("/admin/teams", status_code=303)
@@ -268,7 +282,9 @@ def admin_teams_delete(
 ):
     team = session.get(Team, team_id)
     if team:
-        # Unassign rather than block  employees keep their account,deletion 
+        if team.is_helpdesk:
+            raise HTTPException(status_code=400, detail="The help desk team cannot be deleted")
+        # Unassign rather than block: employees keep their account on deletion,
         # they just need to pick a new team from their profile.
         for employee in session.exec(select(Employee).where(Employee.team_id == team_id)).all():
             employee.team_id = None

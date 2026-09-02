@@ -1,7 +1,7 @@
 [project]
 name = "hotdesk"
 version = "0.1.0"
-description = "Add your description here"
+description = "Hot desk assignment app for the ITS office"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.141.1",
