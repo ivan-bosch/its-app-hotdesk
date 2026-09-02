@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>Hotdesk ITS</h1>
+  <p>Enter your email and we'll send you a login link.</p>
+  <form method="post" action="/login">
+    <input type="email" name="email" placeholder="your.email@irbbarcelona.org" required autofocus>
+    <button type="submit">Send link</button>
+  </form>
+{% endblock %}

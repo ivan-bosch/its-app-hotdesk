@@ -1,0 +1,30 @@
+{# Expects: day, booking (or None), desks, lock_hour, locked (bool) #}
+<div id="day-{{ day.isoformat() }}" style="border:1px solid var(--pico-muted-border-color); border-radius:8px; padding:0.75rem; margin-bottom:0.75rem;">
+  <strong>{{ day.strftime('%A %d/%m') }}</strong>
+  {% if locked %}
+    <p style="margin-top:0.5rem; font-size:0.85rem; color: var(--pico-muted-color);">
+      Closed — choices for this day locked at {{ "%02d"|format(lock_hour) }}:00.
+    </p>
+  {% else %}
+    <div class="grid" style="margin-top:0.5rem;">
+      {% for mode, label in [('presencial', 'In office'), ('teletrabajo', 'Remote'), ('vacation', 'Vacation')] %}
+        <button
+          hx-post="/calendar/book" hx-target="#day-{{ day.isoformat() }}" hx-swap="outerHTML"
+          hx-vals='{"day": "{{ day.isoformat() }}", "mode": "{{ mode }}"}'
+          {% if booking and booking.mode.value == mode %}aria-current="true"{% else %}class="secondary"{% endif %}>
+          {{ label }}
+        </button>
+      {% endfor %}
+    </div>
+  {% endif %}
+  {% if booking and booking.mode.value == 'presencial' %}
+    {% if booking.status and booking.status.value == 'assigned' %}
+      <p style="margin-top:0.5rem;">
+        Assigned desk: <strong>{{ desks[booking.desk_id].code }}</strong>
+       <a href="/map?day={{ day.isoformat() }}">view on map</a>        
+      </p>
+    {% elif booking.status and booking.status.value == 'waitlisted' %}
+      <p style="margin-top:0.5rem; color: var(--pico-del-color);">No free  on the waitlist</p>desk 
+    {% endif %}
+  {% endif %}
+</div>

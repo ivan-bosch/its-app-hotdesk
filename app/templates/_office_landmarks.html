@@ -1,0 +1,11 @@
+<style>
+  .landmark { fill: none; stroke: var(--pico-muted-border-color); stroke-width: 1.5; }
+  .landmark-fill { fill: var(--pico-muted-border-color); opacity: 0.25; stroke: none; }
+  .zone-label { font-size: 11px; fill: var(--pico-muted-color); }
+</style>
+<rect class="landmark" x="{{ landmarks.boss_office.x }}" y="{{ landmarks.boss_office.y }}"
+      width="{{ landmarks.boss_office.w }}" height="{{ landmarks.boss_office.h }}" rx="4"/>
+<circle class="landmark" cx="{{ landmarks.round_table.cx }}" cy="{{ landmarks.round_table.cy }}" r="{{ landmarks.round_table.r }}"/>
+<rect class="landmark-fill" x="{{ landmarks.pillar_1.x }}" y="{{ landmarks.pillar_1.y }}" width="{{ landmarks.pillar_1.w }}" height="{{ landmarks.pillar_1.h }}"/>
+<rect class="landmark-fill" x="{{ landmarks.pillar_2.x }}" y="{{ landmarks.pillar_2.y }}" width="{{ landmarks.pillar_2.w }}" height="{{ landmarks.pillar_2.h }}"/>
+<text class="zone-label" x="{{ landmarks.main_door.x }}" y="{{ landmarks.main_door.y }}">Door A06 &darr;</text>

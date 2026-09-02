@@ -1,0 +1,39 @@
+{% extends "admin_base.html" %}
+{% block admin_content %}
+  <h1>Edit employee</h1>
+  <p>{{ employee.email }}</p>
+
+  <form method="post" action="/admin/employees/{{ employee.id }}/edit">
+    <div class="grid">
+      <label>Name
+        <input type="text" name="name" value="{{ employee.name or '' }}">
+      </label>
+      <label>Surname
+        <input type="text" name="surname" value="{{ employee.surname or '' }}">
+      </label>
+    </div>
+    <div class="grid">
+      <label>Team
+        <select name="team_id">
+          <option value="">No team</option>
+          {% for t in teams %}
+            <option value="{{ t.id }}" {% if employee.team_id == t.id %}selected{% endif %}>{{ t.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Hire date (optional)
+        <input type="date" name="hire_date" value="{{ employee.hire_date.isoformat() if employee.hire_date else '' }}">
+      </label>
+      <label>
+        <input type="checkbox" name="is_boss" value="true" {% if employee.is_boss %}checked{% endif %}>
+        Is the boss
+      </label>
+    </div>
+    <button type="submit">Save changes</button>
+    <a role="button" class="secondary" href="/admin/employees">Cancel</a>
+  </form>
+  <p style="font-size:0.85rem;">
+    Hire date is used to break ties when two people want the same favorite
+    desk in the daily batch resolution — see <code>ALGORITHM.md</code>.
+  </p>
+{% endblock %}

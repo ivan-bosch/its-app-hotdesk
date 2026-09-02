@@ -1,0 +1,9 @@
+{# Day-picker button row. Expects: days, day (selected), picker_url (path, e.g. "/map" or "/admin/reassign"). #}
+<div class="grid" style="grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 0.4rem; margin-bottom: 1rem;">
+  {% for d in days %}
+    <a role="button" {% if d != day %}class="secondary"{% endif %}
+       href="{{ picker_url }}?day={{ d.isoformat() }}" style="padding: 0.4rem; font-size: 0.8rem;">
+      {{ d.strftime('%a %d/%m') }}
+    </a>
+  {% endfor %}
+</div>

@@ -1,0 +1,22 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Local dev database
+*.db
+
+# Secrets / local env
+.env
+
+# NFS artifacts
+.nfs*
+
+# Local tooling
+opencode.json

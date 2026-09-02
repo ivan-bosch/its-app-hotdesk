@@ -1,0 +1,62 @@
+{% extends "admin_base.html" %}
+{% block admin_content %}
+  <h1>Employees</h1>
+
+  <table>
+    <thead>
+      <tr><th>Email</th><th>Name</th><th>Team</th><th>Boss</th><th>Hire date</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for e in employees %}
+        <tr>
+          <td>{{ e.email }}</td>
+          <td>{{ e.name or '' }} {{ e.surname or '' }}</td>
+          <td>{{ teams_by_id[e.team_id].name if e.team_id in teams_by_id else '—' }}</td>
+          <td>{{ 'Yes' if e.is_boss else '' }}</td>
+          <td>{{ e.hire_date.isoformat() if e.hire_date else '—' }}</td>
+          <td style="display:flex; gap:0.4rem;">
+            <a role="button" class="secondary" style="padding: 0.2rem 0.6rem;" href="/admin/employees/{{ e.id }}/edit">Edit</a>
+            <form method="post" action="/admin/employees/{{ e.id }}/delete" onsubmit="return confirm('Delete {{ e.email }}? This removes their bookings too.');">
+              <button type="submit" class="secondary" style="padding: 0.2rem 0.6rem;">Delete</button>
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h3>Add employee</h3>
+  <form method="post" action="/admin/employees">
+    <div class="grid">
+      <label>Email
+        <input type="email" name="email" required>
+      </label>
+      <label>Name
+        <input type="text" name="name">
+      </label>
+      <label>Surname
+        <input type="text" name="surname">
+      </label>
+    </div>
+    <div class="grid">
+      <label>Team
+        <select name="team_id">
+          <option value="">No team</option>
+          {% for t in teams %}<option value="{{ t.id }}">{{ t.name }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>Hire date (optional)
+        <input type="date" name="hire_date">
+      </label>
+      <label>
+        <input type="checkbox" name="is_boss" value="true">
+        Is the boss
+      </label>
+    </div>
+    <button type="submit">Add employee</button>
+  </form>
+  <p style="font-size:0.85rem;">
+    Hire date is used to break ties when two people want the same favorite
+    desk in the daily batch resolution — see <code>ALGORITHM.md</code>.
+  </p>
+{% endblock %}

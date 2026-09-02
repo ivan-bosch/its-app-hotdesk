@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>Check your email</h1>
+  <p>We've sent a login link to <strong>{{ email }}</strong>. It expires in 15 minutes.</p>
+  <p><small>(Local development: if no SMTP server is configured, the link is printed to the server console instead.)</small></p>
+{% endblock %}

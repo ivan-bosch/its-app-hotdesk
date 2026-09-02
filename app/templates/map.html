@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>Office map</h1>
+  <p><a href="/calendar">&larr; Back to calendar</a></p>
+
+  {% set picker_url = "/map" %}
+  {% include "_day_picker.html" %}
+
+  <style>
+    .desk-free { fill: transparent; stroke: var(--pico-muted-border-color); }
+    .desk-mine { fill: var(--pico-primary); stroke: var(--pico-primary); }
+    .desk-occupied { fill: var(--pico-muted-border-color); stroke: var(--pico-muted-border-color); }
+    .desk-reserved { fill: transparent; stroke: var(--pico-muted-border-color); stroke-dasharray: 4 3; }
+    .desk-label { font-size: 10px; fill: var(--pico-color); text-anchor: middle; dominant-baseline: middle; }
+    .desk-mine .desk-label, .desk-occupied .desk-label { fill: var(--pico-contrast); }
+  </style>
+
+  <div style="overflow-x: auto; border: 1px solid var(--pico-muted-border-color); border-radius: 8px; padding: 0.5rem;">
+    <svg width="{{ map_w }}" height="{{ map_h }}" viewBox="0 0 {{ map_w }} {{ map_h }}">
+      {% include "_office_landmarks.html" %}
+
+      {% for label in zone_labels %}
+        <text class="zone-label" x="{{ label.x }}" y="{{ label.y }}">{{ label.name }}</text>
+      {% endfor %}
+
+      {% for desk in desks %}
+        <g>
+          <rect class="desk-{{ 'reserved' if desk.status == 'reserved-empty' else desk.status }}"
+                x="{{ desk.x }}" y="{{ desk.y }}" width="{{ desk.w }}" height="{{ desk.h }}" rx="6"/>
+          <text class="desk-label" x="{{ desk.x + desk.w / 2 }}" y="{{ desk.y + desk.h / 2 }}">{{ desk.code }}</text>
+          {% if desk.occupant %}<title>{{ desk.occupant }}</title>{% endif %}
+        </g>
+      {% endfor %}
+    </svg>
+  </div>
+
+  <p style="margin-top:0.75rem; font-size:0.85rem;">
+    <span style="color: var(--pico-primary);">&#9632;</span> Your desk &nbsp;
+    <span style="color: var(--pico-muted-border-color);">&#9632;</span> Occupied &nbsp;
+    <span style="border:1px dashed var(--pico-muted-border-color); padding: 0 4px;">&nbsp;</span> Reserved (free) &nbsp;
+    <span style="border:1px solid var(--pico-muted-border-color); padding: 0 4px;">&nbsp;</span> Free
+  </p>
+
+  {% set occupied = desks | selectattr('occupant') | list %}
+  {% if occupied %}
+    <h3 style="margin-top:1rem;">Who's where</h3>
+    <ul>
+      {% for desk in occupied %}
+        <li><strong>{{ desk.code }}</strong> — {{ desk.occupant }}{% if desk.status == 'mine' %} (you){% endif %}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+
+  <div class="grid" style="margin-top:1rem;">
+    {% for title, members in roster.sections() if members %}
+      <div>
+        <h4>{{ title }} ({{ members|length }})</h4>
+        <ul>
+          {% for e in members %}<li>{{ e.name }} {{ e.surname }}</li>{% endfor %}
+        </ul>
+      </div>
+    {% endfor %}
+  </div>
+
+{% endblock %}

@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>Your profile</h1>
+  <p>{{ employee.email }}</p>
+  <form method="post" action="/profile">
+    <label>First name
+      <input type="text" name="name" value="{{ employee.name or '' }}" required>
+    </label>
+    <label>Last name
+      <input type="text" name="surname" value="{{ employee.surname or '' }}" required>
+    </label>
+    <label>Team
+      <select name="team_id" required>
+        <option value="" disabled {% if not employee.team_id %}selected{% endif %}>Choose a team</option>
+        {% for t in teams %}
+          <option value="{{ t.id }}" {% if employee.team_id == t.id %}selected{% endif %}>{{ t.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <label>Favorite desk (optional) — tap a desk on the map to choose it</label>
+    <input type="hidden" name="favorite_desk_id" id="favorite_desk_id" value="{{ employee.favorite_desk_id or '' }}">
+
+    <style>
+      .pf-desk { fill: transparent; stroke: var(--pico-muted-border-color); cursor: pointer; }
+      .pf-desk:hover { stroke: var(--pico-primary); }
+      .pf-desk.pf-selected { fill: var(--pico-primary); stroke: var(--pico-primary); }
+      .pf-desk.pf-helpdesk { stroke-dasharray: 4 3; }
+      .pf-label { font-size: 10px; fill: var(--pico-color); text-anchor: middle; dominant-baseline: middle; pointer-events: none; }
+      .pf-selected .pf-label { fill: var(--pico-contrast); }
+    </style>
+
+    <div style="overflow-x: auto; border: 1px solid var(--pico-muted-border-color); border-radius: 8px; padding: 0.5rem; margin: 0.5rem 0;">
+      <svg width="{{ map_w }}" height="{{ map_h }}" viewBox="0 0 {{ map_w }} {{ map_h }}">
+        {% include "_office_landmarks.html" %}
+
+        {% for desk in desks %}
+          <g class="pf-desk {{ 'pf-selected' if employee.favorite_desk_id == desk.id else '' }} {{ 'pf-helpdesk' if desk.reserved.value == 'helpdesk' else '' }}"
+             data-id="{{ desk.id }}" data-code="{{ desk.code }}">
+            <rect x="{{ desk.x }}" y="{{ desk.y }}" width="60" height="38" rx="6"/>
+            <text class="pf-label" x="{{ desk.x + 30 }}" y="{{ desk.y + 19 }}">{{ desk.code }}</text>
+          </g>
+        {% endfor %}
+      </svg>
+    </div>
+    <p style="font-size:0.85rem;">
+      Selected: <strong id="favorite_label">
+        {% for desk in desks %}{% if employee.favorite_desk_id == desk.id %}{{ desk.code }}{% endif %}{% endfor %}
+      </strong>
+      <span id="favorite_empty" {% if employee.favorite_desk_id %}style="display:none"{% endif %}>No preference</span>
+      · <a href="#" id="favorite_clear">clear selection</a>
+      <br><small>Desks with a dashed border are Help Desk desks — only honored if your team is the Help Desk team.</small>
+    </p>
+
+    <button type="submit">Save</button>
+  </form>
+
+  <script>
+    (function () {
+      var input = document.getElementById('favorite_desk_id');
+      var label = document.getElementById('favorite_label');
+      var empty = document.getElementById('favorite_empty');
+
+      document.querySelectorAll('.pf-desk').forEach(function (g) {
+        g.addEventListener('click', function () {
+          document.querySelectorAll('.pf-desk').forEach(function (o) { o.classList.remove('pf-selected'); });
+          g.classList.add('pf-selected');
+          input.value = g.dataset.id;
+          label.textContent = g.dataset.code;
+          empty.style.display = 'none';
+        });
+      });
+
+      document.getElementById('favorite_clear').addEventListener('click', function (e) {
+        e.preventDefault();
+        document.querySelectorAll('.pf-desk').forEach(function (o) { o.classList.remove('pf-selected'); });
+        input.value = '';
+        label.textContent = '';
+        empty.style.display = 'inline';
+      });
+    })();
+  </script>
+{% endblock %}

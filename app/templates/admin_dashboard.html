@@ -1,0 +1,31 @@
+{% extends "admin_base.html" %}
+{% block admin_content %}
+  <h1>Dashboard</h1>
+  <p>Signed in as <strong>{{ admin.username }}</strong></p>
+  <div class="grid">
+    <article>
+      <h3>{{ employee_count }}</h3>
+      <p>Employees</p>
+    </article>
+    <article>
+      <h3>{{ team_count }}</h3>
+      <p>Teams</p>
+    </article>
+    <article>
+      <h3>{{ stats.assigned }}</h3>
+      <p>Assigned desks today ({{ today.strftime('%a %d/%m') }})</p>
+    </article>
+    <article>
+      <h3>{{ stats.waitlisted }}</h3>
+      <p>Waitlisted today</p>
+    </article>
+    <article>
+      <h3>{{ stats.remote }}</h3>
+      <p>Remote today</p>
+    </article>
+    <article>
+      <h3>{{ stats.vacation }}</h3>
+      <p>On vacation today</p>
+    </article>
+  </div>
+{% endblock %}

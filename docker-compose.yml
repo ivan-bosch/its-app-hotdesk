@@ -1,0 +1,24 @@
+services:
+  hotdesk:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      TZ: Europe/Madrid
+      HOTDESK_DB: /data/hotdesk.db
+      # Generar: python3 -c 'import secrets; print(secrets.token_hex(32))'
+      SECRET_KEY: ${SECRET_KEY:?define SECRET_KEY in .env}
+      # Sin SMTP_HOST la app imprime los magic links por consola (modo dev).
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      SMTP_USE_TLS: ${SMTP_USE_TLS:-true}
+      BOOKING_LOCK_HOUR: ${BOOKING_LOCK_HOUR:-8}
+    volumes:
+      - hotdesk-data:/data
+    restart: unless-stopped
+
+volumes:
+  hotdesk-data:

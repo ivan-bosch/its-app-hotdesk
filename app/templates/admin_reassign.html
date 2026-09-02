@@ -1,0 +1,38 @@
+{% extends "admin_base.html" %}
+{% block admin_content %}
+  <h1>Reassign desks</h1>
+
+  {% set picker_url = "/admin/reassign" %}
+  {% include "_day_picker.html" %}
+
+  <table>
+    <thead>
+      <tr><th>Employee</th><th>Status</th><th>Desk</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+        <tr>
+          <td>{{ row.employee.name or row.employee.email }} {{ row.employee.surname or '' }}</td>
+          <td>{{ row.status_label }}</td>
+          <td>
+            <form method="post" action="/admin/reassign" style="display:flex; gap:0.4rem; align-items:center;">
+              <input type="hidden" name="day" value="{{ day.isoformat() }}">
+              <input type="hidden" name="employee_id" value="{{ row.employee.id }}">
+              <select name="desk_id">
+                <option value="" {% if not row.current_desk_id %}selected{% endif %}>Waitlist (no desk)</option>
+                {% for d in row.available_desks %}
+                  <option value="{{ d.id }}" {% if d.id == row.current_desk_id %}selected{% endif %}>{{ d.code }}</option>
+                {% endfor %}
+              </select>
+              <button type="submit" style="padding: 0.3rem 0.8rem;">Apply</button>
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p style="font-size:0.85rem;">
+    Choosing a desk already held by someone else that day bumps them to the waitlist —
+    they are automatically re-evaluated for another free desk right away.
+  </p>
+{% endblock %}

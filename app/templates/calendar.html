@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>Hi, {{ employee.name }}</h1>
+  <p><a href="/profile">Edit profile</a> · <a href="/map">View office map</a> · <a href="/logout">Log out</a></p>
+  <p style="font-size:0.85rem;">
+    Marking a day "In office" assigns you a desk right away — the whole day is
+    re-planned on every change: contested favorite desks go to whoever has more
+    seniority, everyone else is seated near their team, and anyone left without
+    a desk goes on the waitlist (you'll get an email if your desk changes or
+    one frees up). Each day locks at {{ "%02d"|format(lock_hour) }}:00 that
+    morning — after that, the day's choice can't be changed.
+  </p>
+  <h2>This week</h2>
+  {% for day in days %}
+    {% with booking = bookings.get(day), locked = day in locked_days %}
+      {% include "_day_row.html" %}
+    {% endwith %}
+  {% endfor %}
+{% endblock %}

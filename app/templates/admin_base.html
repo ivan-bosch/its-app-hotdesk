@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block container_width %}960px{% endblock %}
+{% block content %}
+  <nav>
+    <ul><li><strong>Hotdesk admin</strong></li></ul>
+    <ul>
+      <li><a href="/admin">Dashboard</a></li>
+      <li><a href="/admin/employees">Employees</a></li>
+      <li><a href="/admin/teams">Teams</a></li>
+      <li><a href="/admin/reassign">Reassign desks</a></li>
+      <li><a href="/admin/password">Password</a></li>
+      <li><a href="/admin/logout">Log out</a></li>
+    </ul>
+  </nav>
+  {% block admin_content %}{% endblock %}
+{% endblock %}
