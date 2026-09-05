@@ -11,6 +11,7 @@ wheels/
 
 # Local dev database
 *.db
+data/
 
 # Secrets / local env
 .env

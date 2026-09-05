@@ -59,6 +59,9 @@ class Employee(SQLModel, table=True):
     favorite_desk_id: int | None = Field(default=None, foreign_key="desk.id")
     is_boss: bool = Field(default=False)
     hire_date: date | None = Field(default=None)
+    hire_date_proposed: date | None = Field(default=None)
+    password_hash: str | None = None
+    password_salt: str | None = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
     @property
@@ -93,6 +96,7 @@ class MagicLink(SQLModel, table=True):
     token: str = Field(unique=True, index=True)
     expires_at: datetime
     used_at: datetime | None = None
+    purpose: str = Field(default="login")  # "login" (first registration) | "reset" (forgot password)
 
 
 class AdminUser(SQLModel, table=True):

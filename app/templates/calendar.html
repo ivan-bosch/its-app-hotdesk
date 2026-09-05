@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
+  {% include "_nav.html" %}
   <h1>Hi, {{ employee.name }}</h1>
-  <p><a href="/profile">Edit profile</a> · <a href="/map">View office map</a> · <a href="/logout">Log out</a></p>
   <p style="font-size:0.85rem;">
     Marking a day "In office" assigns you a desk right away — the whole day is
     re-planned on every change: contested favorite desks go to whoever has more

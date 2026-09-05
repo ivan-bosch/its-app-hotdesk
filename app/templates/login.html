@@ -1,9 +1,14 @@
 {% extends "base.html" %}
 {% block content %}
   <h1>Hotdesk ITS</h1>
-  <p>Enter your email and we'll send you a login link.</p>
+  <p>Sign in with your email and password. First time here? Leave the password empty and we'll email you a setup link.</p>
+  {% if error %}<p style="color:#b00000">{{ error }}</p>{% endif %}
   <form method="post" action="/login">
     <input type="email" name="email" placeholder="your.email@irbbarcelona.org" required autofocus>
-    <button type="submit">Send link</button>
+    <input type="password" name="password" placeholder="password (empty = send me a setup link)">
+    <button type="submit">Sign in</button>
+  </form>
+  <form method="post" action="/forgot" style="margin-top:1em">
+    <button type="submit" style="border:0;background:none;cursor:pointer;padding:0">Forgot your password?</button>
   </form>
 {% endblock %}

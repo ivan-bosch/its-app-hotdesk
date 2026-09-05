@@ -24,6 +24,13 @@
       <label>Hire date (optional)
         <input type="date" name="hire_date" value="{{ employee.hire_date.isoformat() if employee.hire_date else '' }}">
       </label>
+      {% if employee.hire_date_proposed %}
+        <p style="font-size:0.85rem; margin-top:0.25rem;">
+          Pending proposal: <strong>{{ employee.hire_date_proposed.isoformat() }}</strong> —
+          saving this form clears it. Approve/reject it from the
+          <a href="/admin/employees">employees list</a> instead.
+        </p>
+      {% endif %}
       <label>
         <input type="checkbox" name="is_boss" value="true" {% if employee.is_boss %}checked{% endif %}>
         Is the boss

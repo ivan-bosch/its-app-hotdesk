@@ -1,3 +1,4 @@
+from datetime import datetime
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, Form, HTTPException, Request
@@ -14,13 +15,16 @@ from app.auth import (
     make_session_cookie,
     optional_employee,
     request_login,
+    request_reset,
+    set_password,
     verify_token,
 )
 from app.dates import resolve_target_day, upcoming_weekdays
 from app.db import get_session, init_db
-from app.forms import parse_day, parse_optional_int
+from app.forms import parse_date, parse_day, parse_optional_int
 from app.mapview import LANDMARKS, MAP_HEIGHT, MAP_WIDTH, build_map
 from app.models import Booking, Desk, Employee, Mode, Reserved, Team
+from app.security import verify_password
 from app.templating import templates
 
 app = FastAPI(title="Hotdesk")
@@ -44,8 +48,8 @@ def home(employee: Employee | None = Depends(optional_employee)):
     if not employee:
         return RedirectResponse("/login")
     if not employee.profile_complete:
-        return RedirectResponse("/profile")
-    return RedirectResponse("/calendar")
+        return RedirectResponse("/settings")
+    return RedirectResponse("/map")
 
 
 @app.get("/login", response_class=HTMLResponse)
@@ -53,18 +57,9 @@ def login_form(request: Request):
     return templates.TemplateResponse(request, "login.html")
 
 
-@app.post("/login", response_class=HTMLResponse)
-def login_submit(request: Request, email: str = Form(...), session: Session = Depends(get_session)):
-    email = email.strip().lower()
-    request_login(session, email, base_url=str(request.base_url))
-    return templates.TemplateResponse(request, "check_email.html", {"email": email})
-
-
-@app.get("/auth/verify")
-def auth_verify(request: Request, token: str, session: Session = Depends(get_session)):
-    employee = verify_token(session, token)
-    target = "/profile" if not employee.profile_complete else "/calendar"
-    response = RedirectResponse(target)
+def _session_response(employee: Employee, request: Request) -> RedirectResponse:
+    target = "/settings" if not employee.profile_complete else "/map"
+    response = RedirectResponse(target, status_code=303)
     response.set_cookie(
         SESSION_COOKIE,
         make_session_cookie(employee.id),
@@ -76,6 +71,80 @@ def auth_verify(request: Request, token: str, session: Session = Depends(get_ses
     return response
 
 
+@app.post("/login", response_class=HTMLResponse)
+def login_submit(
+    request: Request,
+    email: str = Form(...),
+    password: str = Form(""),
+    session: Session = Depends(get_session),
+):
+    email = email.strip().lower()
+    employee = session.exec(select(Employee).where(Employee.email == email)).first()
+    if employee and employee.password_hash:
+        if not verify_password(password, employee.password_hash, employee.password_salt):
+            # 200 (not 401) so the status code can't be used to map which
+            # emails have a password set (user enumeration). Acceptable
+            # trade-off for an internal app with known staff.
+            return templates.TemplateResponse(
+                request, "login.html", {"error": "Invalid email or password"}, status_code=200
+            )
+        return _session_response(employee, request)
+    # New user, or legacy account without a password: magic link flow.
+    request_login(session, email, base_url=str(request.base_url))
+    return templates.TemplateResponse(request, "check_email.html", {"email": email})
+
+
+@app.post("/forgot", response_class=HTMLResponse)
+def forgot_submit(request: Request, email: str = Form(...), session: Session = Depends(get_session)):
+    email = email.strip().lower()
+    request_reset(session, email, base_url=str(request.base_url))
+    return templates.TemplateResponse(request, "check_email.html", {"email": email})
+
+
+@app.get("/auth/verify")
+def auth_verify(request: Request, token: str, session: Session = Depends(get_session)):
+    link, employee = verify_token(session, token, consume=False)
+    if link.purpose == "reset" or not employee.password_hash:
+        # First registration (or forgot password): must choose a password first.
+        return RedirectResponse(f"/set-password?token={token}")
+    link.used_at = datetime.utcnow()
+    session.add(link)
+    session.commit()
+    return _session_response(employee, request)
+
+
+@app.get("/set-password", response_class=HTMLResponse)
+def set_password_form(request: Request, token: str, session: Session = Depends(get_session)):
+    try:
+        verify_token(session, token, consume=False)
+    except HTTPException:
+        return templates.TemplateResponse(
+            request, "set_password.html", {"token": token, "error": "Invalid or expired link"}, status_code=400
+        )
+    return templates.TemplateResponse(request, "set_password.html", {"token": token})
+
+
+@app.post("/set-password")
+def set_password_submit(
+    request: Request,
+    token: str = Form(...),
+    new_password: str = Form(...),
+    confirm_password: str = Form(...),
+    session: Session = Depends(get_session),
+):
+    if len(new_password) < 8:
+        return templates.TemplateResponse(
+            request, "set_password.html", {"token": token, "error": "Password must be at least 8 characters"},
+            status_code=400,
+        )
+    if new_password != confirm_password:
+        return templates.TemplateResponse(
+            request, "set_password.html", {"token": token, "error": "Passwords do not match"}, status_code=400
+        )
+    employee = set_password(session, token, new_password)
+    return _session_response(employee, request)
+
+
 @app.get("/logout")
 def logout():
     response = RedirectResponse("/login")
@@ -83,8 +152,13 @@ def logout():
     return response
 
 
-@app.get("/profile", response_class=HTMLResponse)
-def profile_form(
+@app.get("/profile")
+def profile_redirect():
+    return RedirectResponse("/settings")
+
+
+@app.get("/settings", response_class=HTMLResponse)
+def settings_form(
     request: Request,
     employee: Employee = Depends(current_employee),
     session: Session = Depends(get_session),
@@ -93,7 +167,7 @@ def profile_form(
     teams = session.exec(select(Team)).all()
     return templates.TemplateResponse(
         request,
-        "profile.html",
+        "settings.html",
         {
             "employee": employee,
             "desks": desks,
@@ -106,11 +180,13 @@ def profile_form(
 
 
 @app.post("/profile", response_class=HTMLResponse)
+@app.post("/settings", response_class=HTMLResponse)
 def profile_submit(
     name: str = Form(...),
     surname: str = Form(...),
     team_id: str = Form(...),
     favorite_desk_id: str = Form(""),
+    hire_date: str = Form(""),
     employee: Employee = Depends(current_employee),
     session: Session = Depends(get_session),
 ):
@@ -122,6 +198,11 @@ def profile_submit(
     employee.surname = surname.strip()
     employee.team_id = team.id
 
+    # Employees only ever PROPOSE a hire date; an admin approves it before it
+    # counts as seniority (self-reported seniority must not be gameable).
+    proposed = parse_date(hire_date)
+    employee.hire_date_proposed = proposed if proposed and proposed != employee.hire_date else None
+
     desk = session.get(Desk, parse_optional_int(favorite_desk_id) or 0)
     if desk and desk.reserved == Reserved.helpdesk and not team.is_helpdesk:
         desk = None  # ignore an ineligible choice rather than erroring
@@ -129,7 +210,7 @@ def profile_submit(
 
     session.add(employee)
     session.commit()
-    return RedirectResponse("/calendar", status_code=303)
+    return RedirectResponse("/map", status_code=303)
 
 
 @app.get("/calendar", response_class=HTMLResponse)

@@ -13,7 +13,22 @@
           <td>{{ e.name or '' }} {{ e.surname or '' }}</td>
           <td>{{ teams_by_id[e.team_id].name if e.team_id in teams_by_id else '—' }}</td>
           <td>{{ 'Yes' if e.is_boss else '' }}</td>
-          <td>{{ e.hire_date.isoformat() if e.hire_date else '—' }}</td>
+          <td>
+            {{ e.hire_date.isoformat() if e.hire_date else '—' }}
+            {% if e.hire_date_proposed %}
+              <div style="font-size:0.85rem; margin-top:0.2rem;">
+                proposed: {{ e.hire_date_proposed.isoformat() }}
+                <form method="post" action="/admin/employees/{{ e.id }}/hire_date_proposed" style="display:inline;">
+                  <input type="hidden" name="action" value="approve">
+                  <button type="submit" class="secondary" style="padding:0.1rem 0.5rem;">Approve</button>
+                </form>
+                <form method="post" action="/admin/employees/{{ e.id }}/hire_date_proposed" style="display:inline;">
+                  <input type="hidden" name="action" value="reject">
+                  <button type="submit" class="secondary" style="padding:0.1rem 0.5rem;">Reject</button>
+                </form>
+              </div>
+            {% endif %}
+          </td>
           <td style="display:flex; gap:0.4rem;">
             <a role="button" class="secondary" style="padding: 0.2rem 0.6rem;" href="/admin/employees/{{ e.id }}/edit">Edit</a>
             <form method="post" action="/admin/employees/{{ e.id }}/delete" onsubmit="return confirm('Delete {{ e.email }}? This removes their bookings too.');">
@@ -58,5 +73,7 @@
   <p style="font-size:0.85rem;">
     Hire date is used to break ties when two people want the same favorite
     desk in the daily batch resolution — see <code>ALGORITHM.md</code>.
+    Employees can propose their own hire date from their profile; it only
+    counts once approved here.
   </p>
 {% endblock %}

@@ -129,6 +129,7 @@ def _apply_employee_form(
     employee.team_id = parse_optional_int(team_id)
     employee.is_boss = is_boss
     employee.hire_date = parse_date(hire_date)
+    employee.hire_date_proposed = None  # a direct admin edit supersedes any pending proposal
 
 
 @router.get("/employees", response_class=HTMLResponse)
@@ -206,6 +207,24 @@ def admin_employees_edit_submit(
         raise HTTPException(status_code=404, detail="Employee not found")
 
     _apply_employee_form(employee, name, surname, team_id, is_boss, hire_date)
+    session.add(employee)
+    session.commit()
+    return RedirectResponse("/admin/employees", status_code=303)
+
+
+@router.post("/employees/{employee_id}/hire_date_proposed", response_class=HTMLResponse)
+def admin_employee_proposed_action(
+    employee_id: int,
+    action: str = Form(...),
+    admin: AdminUser = Depends(current_admin),
+    session: Session = Depends(get_session),
+):
+    employee = session.get(Employee, employee_id)
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    if action == "approve" and employee.hire_date_proposed:
+        employee.hire_date = employee.hire_date_proposed
+    employee.hire_date_proposed = None
     session.add(employee)
     session.commit()
     return RedirectResponse("/admin/employees", status_code=303)

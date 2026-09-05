@@ -12,7 +12,10 @@ FastAPI + SQLModel (SQLite) + Jinja2 + HTMX + Pico.css. All-Python backend, no
 JS/CSS build — chosen this way because a single person maintains it and the
 app needs to open well from a phone without depending on a frontend pipeline.
 
-- **Employee auth**: magic link by email (no passwords).
+- **Employee auth**: first login is a magic link by email, which forces the
+  user to choose a password (`/set-password`); afterwards login is
+  email+password at `/login`, and "forgot password" sends a reset magic link
+  that sets a new password.
 - **Admin auth**: separate username/password login at `/admin/login` for
   managing employees, teams, and desk assignments (see below).
 - **Email**: real SMTP sending via `app/auth.py::send_email`, configured with
@@ -47,6 +50,19 @@ password: admin123
 Log in at `/admin/login` and change the password immediately from
 `/admin/password`.
 
+### Tests
+
+End-to-end suites (real app + real SQLite, no mocks) live in `tests/`:
+
+```bash
+uv run --with httpx python tests/test_password_login.py
+uv run --with httpx python tests/test_seniority_flow.py
+uv run --with httpx python tests/test_home_settings.py
+```
+
+Each suite uses a throwaway database pre-created with the *old* schema, so
+the startup column migration is exercised on every run.
+
 ### Environment variables
 
 | Variable | Default | Purpose |
@@ -71,8 +87,9 @@ app/
   security.py      Password hashing (PBKDF2) + SECRET_KEY, shared by db.py,
                     auth.py and admin_auth.py
   email.py         SMTP config + send_email (console fallback when unconfigured)
-  auth.py          Employee magic link, signed session cookie, current_employee
-                    / optional_employee dependencies
+  auth.py          Employee magic link (registration/reset), password
+                    set/verify, signed session cookie, current_employee /
+                    optional_employee dependencies
   admin_auth.py    Admin username/password login, separate signed session
                     cookie, current_admin / optional_admin dependencies
   admin.py         Admin panel routes (employees, teams, desk reassignment,
@@ -85,16 +102,21 @@ app/
                     main.py and admin.py
   forms.py         Form/query parsing helpers (dates, optional ints)
   templating.py    The single shared Jinja2Templates instance
-  main.py          FastAPI routes (login, profile, calendar, map)
+  main.py          FastAPI routes (login, settings, calendar, map)
   templates/       Jinja2 + HTMX; the office SVG map (desk/pillar layout) lives
                     in _office_landmarks.html, included by both map.html
-                    (view occupancy) and profile.html (pick a favorite by
+                    (view occupancy) and settings.html (pick a favorite by
                     clicking); admin_*.html are the admin panel pages
 ```
 
+The landing page (`/`) is the office map for today; the calendar is reached
+from the "Plan your week" button. Profile editing lives under `/settings`
+(`/profile` still redirects there). The map uses a fixed light "paper"
+palette so it stays legible in both light and dark OS themes.
+
 No frontend build or JS framework: the only real interactivity (toggle
 in-office/remote without reloading, clicking the map to pick a favorite) is
-HTMX plus a bit of vanilla JS in `profile.html`.
+HTMX plus a bit of vanilla JS in `settings.html`.
 
 ## Admin panel (`/admin`)
 
@@ -105,6 +127,10 @@ administrator:
   name, team, boss flag, optional hire date), edit an existing one (including
   hire date, used as a seniority priority weight — see the algorithm below),
   or delete one (also removes their bookings and any pending magic links).
+  Employees can propose their own hire date from `/settings`; it shows up
+  here as a pending proposal with **Approve / Reject** buttons and only
+  counts as seniority once approved (self-reported seniority must not be
+  gameable).
 - **Teams** (`/admin/teams`) — teams are a database table (`Team`), not a fixed
   list: add, or delete a team (its employees are left without a team rather
   than blocking the deletion). Exactly one team can be flagged
@@ -203,8 +229,11 @@ which code paths trigger each one.
 
 ### Seniority as a priority weight
 
-Employees have an optional `hire_date` (set from `/admin/employees/{id}/edit`
-— not self-editable). It converts into plain years of seniority
+Employees have an optional `hire_date`. Employees can propose their own from
+`/settings`; it only takes effect once an admin approves it from
+`/admin/employees` (self-reported seniority must not be gameable). Admins
+can also set it directly from `/admin/employees/{id}/edit`. It converts into
+plain years of seniority
 (`(today - hire_date).days / 365.25`, or `0` if unset) and is used **only**
 to break ties when two or more people's favorite desk collides in the same
 batch resolution — more years wins, no randomness involved. It plays no role

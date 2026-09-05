@@ -191,10 +191,10 @@ app. Cuando se decida, como mínimo habrá que:
 
 El repo incluye `Dockerfile`, `docker-compose.yml` y `.env.example`. La app
 corre en un contenedor `python:3.11-slim` (dependencias instaladas con `uv`
-desde `uv.lock`), como usuario no-root, con `TZ=Europe/Madrid`. La base de
-datos SQLite vive fuera del contenedor, en un volumen: dentro se crea en
-`/data/hotdesk.db` (variable `HOTDESK_DB`), que el compose monta como
-volumen `hotdesk-data`.
+desde `uv.lock`), como usuario no-root (uid 10001), con `TZ=Europe/Madrid`.
+La base de datos SQLite vive en una carpeta del host, `data/` junto al
+`docker-compose.yml` (bind mount `./data:/data`): dentro del contenedor se
+crea en `/data/hotdesk.db` (variable `HOTDESK_DB`).
 
 ### 7.1 Preparar las variables
 
@@ -212,16 +212,41 @@ Y rellenar en `.env`:
 ### 7.2 Arrancar
 
 ```bash
+mkdir -p data && chown 10001:10001 data   # el contenedor escribe como uid 10001
 docker compose up --build -d
 ```
 
+> El `chown` es importante: si `data/` no existe, el daemon de Docker la
+> crea como `root:root` y el contenedor (usuario no-root) no puede crear la
+> base de datos dentro → el contenedor entra en bucle de reinicios.
+
 - La app queda en `http://localhost:8000`.
-- En el primer arranque se siembra la DB en el volumen y se imprime la
-  cuenta admin por defecto en los logs: `docker compose logs`.
-- `hotdesk.db` persiste en el volumen: `docker compose down` no lo borra
-  (`docker compose down -v` sí lo borra).
+- En el primer arranque se siembra la DB en `./data/hotdesk.db` y se
+  imprime la cuenta admin por defecto en los logs: `docker compose logs`.
+- `hotdesk.db` persiste en `./data/`: `docker compose down` no lo borra.
+  Para borrar la DB de verdad hay que borrar el fichero a mano.
 - Para actualizar con cambios de código: `docker compose up --build -d`
-  (el volumen con la DB se conserva).
+  (la DB en `./data/` se conserva).
+- Backup: `cp data/hotdesk.db /donde/quieras/` (con el contenedor parado).
+
+### 7.2.1 ¿Venía de una versión antigua con volumen `hotdesk-data`?
+
+Las versiones anteriores montaban un volumen nombrado `hotdesk-data`. El
+cambio a bind mount **no migra la DB solo**: si arrancas directamente, la
+app crea una DB vacía en `./data/` y la antigua (con empleados, reservas y
+la contraseña del admin) queda huérfana en el volumen. Para migrar:
+
+```bash
+docker compose down
+# sacar la DB del volumen antiguo
+docker run --rm -v its-app-hotdesk_hotdesk-data:/vol -v "$PWD/data":/out alpine \
+  cp /vol/hotdesk.db /out/hotdesk.db
+chown 10001:10001 data/hotdesk.db
+docker compose up --build -d
+```
+
+(El nombre del volumen lleva el prefijo del directorio del proyecto;
+confírmalo con `docker volume ls`.)
 
 ### 7.3 Notas
 
@@ -230,7 +255,8 @@ docker compose up --build -d
 - Cambiar la contraseña del admin por defecto en el primer arranque real
   (sección 6, punto 4).
 - HTTPS/reverse proxy (Caddy/nginx) es una capa aparte, por delante del
-  puerto 8000.
+  puerto 8000 — ver [`HTTPS.md`](HTTPS.md) (certificados, dominio, y dónde
+  vive la base de datos).
 
 ---
 

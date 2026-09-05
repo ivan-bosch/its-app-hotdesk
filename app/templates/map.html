@@ -1,22 +1,24 @@
 {% extends "base.html" %}
 {% block content %}
+  {% include "_nav.html" %}
   <h1>Office map</h1>
-  <p><a href="/calendar">&larr; Back to calendar</a></p>
+  <p><a role="button" href="/calendar">Plan your week</a></p>
 
   {% set picker_url = "/map" %}
   {% include "_day_picker.html" %}
 
   <style>
-    .desk-free { fill: transparent; stroke: var(--pico-muted-border-color); }
-    .desk-mine { fill: var(--pico-primary); stroke: var(--pico-primary); }
-    .desk-occupied { fill: var(--pico-muted-border-color); stroke: var(--pico-muted-border-color); }
-    .desk-reserved { fill: transparent; stroke: var(--pico-muted-border-color); stroke-dasharray: 4 3; }
-    .desk-label { font-size: 10px; fill: var(--pico-color); text-anchor: middle; dominant-baseline: middle; }
-    .desk-mine .desk-label, .desk-occupied .desk-label { fill: var(--pico-contrast); }
+    .desk-free { fill: #ffffff; stroke: #9a958c; }
+    .desk-mine { fill: #2f6fed; stroke: #2f6fed; }
+    .desk-occupied { fill: #c9c4ba; stroke: #c9c4ba; }
+    .desk-reserved { fill: #ffffff; stroke: #9a958c; stroke-dasharray: 4 3; }
+    .desk-label { font-size: 10px; fill: #3d3a34; text-anchor: middle; dominant-baseline: middle; }
+    .desk-mine .desk-label { fill: #ffffff; }
   </style>
 
-  <div style="overflow-x: auto; border: 1px solid var(--pico-muted-border-color); border-radius: 8px; padding: 0.5rem;">
+  <div style="overflow-x: auto; border: 1px solid #d8d3ca; border-radius: 8px; padding: 0.5rem;">
     <svg width="{{ map_w }}" height="{{ map_h }}" viewBox="0 0 {{ map_w }} {{ map_h }}">
+      <rect width="100%" height="100%" fill="#f8f7f4"/>
       {% include "_office_landmarks.html" %}
 
       {% for label in zone_labels %}
@@ -35,10 +37,10 @@
   </div>
 
   <p style="margin-top:0.75rem; font-size:0.85rem;">
-    <span style="color: var(--pico-primary);">&#9632;</span> Your desk &nbsp;
-    <span style="color: var(--pico-muted-border-color);">&#9632;</span> Occupied &nbsp;
-    <span style="border:1px dashed var(--pico-muted-border-color); padding: 0 4px;">&nbsp;</span> Reserved (free) &nbsp;
-    <span style="border:1px solid var(--pico-muted-border-color); padding: 0 4px;">&nbsp;</span> Free
+    <span style="color: #2f6fed;">&#9632;</span> Your desk &nbsp;
+    <span style="color: #c9c4ba;">&#9632;</span> Occupied &nbsp;
+    <span style="border:1px dashed #9a958c; padding: 0 4px;">&nbsp;</span> Reserved (free) &nbsp;
+    <span style="border:1px solid #9a958c; padding: 0 4px; background:#ffffff;">&nbsp;</span> Free
   </p>
 
   {% set occupied = desks | selectattr('occupant') | list %}

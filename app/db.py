@@ -19,8 +19,24 @@ def get_session():
         yield session
 
 
+def _ensure_columns() -> None:
+    """Add columns that create_all can't add to pre-existing tables (SQLite)."""
+    with engine.connect() as conn:
+        for table, column, ddl in (
+            ("employee", "password_hash", "ALTER TABLE employee ADD COLUMN password_hash VARCHAR"),
+            ("employee", "password_salt", "ALTER TABLE employee ADD COLUMN password_salt VARCHAR"),
+            ("employee", "hire_date_proposed", "ALTER TABLE employee ADD COLUMN hire_date_proposed DATE"),
+            ("magiclink", "purpose", "ALTER TABLE magiclink ADD COLUMN purpose VARCHAR NOT NULL DEFAULT 'login'"),
+        ):
+            cols = {row[1] for row in conn.exec_driver_sql(f"PRAGMA table_info({table})")}
+            if column not in cols:
+                conn.exec_driver_sql(ddl)
+        conn.commit()
+
+
 def init_db() -> None:
     SQLModel.metadata.create_all(engine)
+    _ensure_columns()
     with Session(engine) as session:
         if not session.exec(select(Zone)).first():
             seed_desks(session)

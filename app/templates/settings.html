@@ -1,8 +1,9 @@
 {% extends "base.html" %}
 {% block content %}
-  <h1>Your profile</h1>
+  {% include "_nav.html" %}
+  <h1>Settings</h1>
   <p>{{ employee.email }}</p>
-  <form method="post" action="/profile">
+  <form method="post" action="/settings">
     <label>First name
       <input type="text" name="name" value="{{ employee.name or '' }}" required>
     </label>
@@ -17,21 +18,33 @@
         {% endfor %}
       </select>
     </label>
+    <label>Hire date (used for seniority when two people want the same favorite desk)
+      <input type="date" name="hire_date"
+             value="{{ (employee.hire_date_proposed or employee.hire_date).isoformat() if (employee.hire_date_proposed or employee.hire_date) else '' }}">
+    </label>
+    <p style="font-size:0.85rem;">
+      Approved: <strong>{{ employee.hire_date.isoformat() if employee.hire_date else 'not set' }}</strong>
+      {% if employee.hire_date_proposed and employee.hire_date_proposed != employee.hire_date %}
+        · <em>pending admin approval: {{ employee.hire_date_proposed.isoformat() }}</em>
+      {% endif %}
+      — changes take effect once an admin approves them.
+    </p>
 
     <label>Favorite desk (optional) — tap a desk on the map to choose it</label>
     <input type="hidden" name="favorite_desk_id" id="favorite_desk_id" value="{{ employee.favorite_desk_id or '' }}">
 
     <style>
-      .pf-desk { fill: transparent; stroke: var(--pico-muted-border-color); cursor: pointer; }
-      .pf-desk:hover { stroke: var(--pico-primary); }
-      .pf-desk.pf-selected { fill: var(--pico-primary); stroke: var(--pico-primary); }
+      .pf-desk { fill: #ffffff; stroke: #9a958c; cursor: pointer; }
+      .pf-desk:hover { stroke: #2f6fed; }
+      .pf-desk.pf-selected { fill: #2f6fed; stroke: #2f6fed; }
       .pf-desk.pf-helpdesk { stroke-dasharray: 4 3; }
-      .pf-label { font-size: 10px; fill: var(--pico-color); text-anchor: middle; dominant-baseline: middle; pointer-events: none; }
-      .pf-selected .pf-label { fill: var(--pico-contrast); }
+      .pf-label { font-size: 10px; fill: #3d3a34; text-anchor: middle; dominant-baseline: middle; pointer-events: none; }
+      .pf-selected .pf-label { fill: #ffffff; }
     </style>
 
-    <div style="overflow-x: auto; border: 1px solid var(--pico-muted-border-color); border-radius: 8px; padding: 0.5rem; margin: 0.5rem 0;">
+    <div style="overflow-x: auto; border: 1px solid #d8d3ca; border-radius: 8px; padding: 0.5rem; margin: 0.5rem 0;">
       <svg width="{{ map_w }}" height="{{ map_h }}" viewBox="0 0 {{ map_w }} {{ map_h }}">
+        <rect width="100%" height="100%" fill="#f8f7f4"/>
         {% include "_office_landmarks.html" %}
 
         {% for desk in desks %}
