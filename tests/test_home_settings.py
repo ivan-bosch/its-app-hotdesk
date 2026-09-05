@@ -10,6 +10,8 @@ Behavior under test:
 - employee pages share a nav (Map / Calendar / Settings / Log out)
 - the map page offers a "Plan your week" action to the calendar
 - the office map uses a fixed light "paper" palette (theme-independent)
+- every page pins the light theme (data-theme="light") so OS dark mode
+  cannot turn the text light on the light paper background
 """
 import os
 import sqlite3
@@ -142,6 +144,21 @@ def test_map_fixed_light_palette():
                f"fondo papel #f8f7f4: {has_paper}, sin vars pico en el mapa: {no_pico_vars}")
 
 
+def test_fixed_light_theme():
+    """Pico 2 follows the OS dark mode unless <html data-theme> pins it.
+    The app is a fixed light "paper" theme, so every page must render
+    data-theme="light" (otherwise dark-mode browsers show light text on
+    the light paper background and titles become invisible)."""
+    with TestClient(app, follow_redirects=False, raise_server_exceptions=False) as client:
+        for url in ("/login", "/admin/login"):
+            html = client.get(url).text
+            assert f'<html lang="en" data-theme="light">' in html, (
+                f"{url} no fija el tema claro: <html> = "
+                f"{html[html.find('<html'):html.find('<html') + 60]!r}"
+            )
+        report("tema claro fijo (data-theme=light)", True, "login y admin/login lo fijan")
+
+
 def test_waitlisted_calendar_row_text():
     """Fill the office (14 general desks) so the 15th declarer is waitlisted,
     then check the calendar row renders a coherent message (regression: the
@@ -172,6 +189,7 @@ if __name__ == "__main__":
         test_map_has_plan_your_week,
         test_settings_post_primary_target,
         test_map_fixed_light_palette,
+        test_fixed_light_theme,
         test_waitlisted_calendar_row_text,
     ):
         try:

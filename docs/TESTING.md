@@ -60,7 +60,7 @@ The hire-date proposal/approval flow and its effect on the algorithm:
 | admin list shows pending proposal | The admin employees page renders the pending proposal with Approve/Reject actions. |
 | old schema migration | Same as above — the suite's DB starts with the pre-migration schema. |
 
-### 1.3 `tests/test_home_settings.py` — 8 tests / 9 checks
+### 1.3 `tests/test_home_settings.py` — 10 tests / 11 checks
 
 Home routing, the settings page, and the map:
 
@@ -70,10 +70,11 @@ Home routing, the settings page, and the map:
 | home → /settings con perfil incompleto | `/` redirects to `/settings` when the profile is incomplete. |
 | /profile → /settings | The old `/profile` URL still redirects to `/settings`. |
 | /settings muestra formulario + logout | The settings page renders the profile form (action `/settings`) and a logout link. |
-| nav en /map, nav en /calendar (×2) | Employee pages share the nav (links to `/map`, `/calendar`, `/settings`) — reported once per page, hence 9 checks from 8 tests. |
+| nav en /map, nav en /calendar (×2) | Employee pages share the nav (links to `/map`, `/calendar`, `/settings`) — reported once per page, hence 11 checks from 10 tests. |
 | mapa ofrece 'Plan your week' → /calendar | The map page offers the link to the week planner. |
 | POST /settings (target primario del formulario) | Submitting the form redirects to `/map` (303). |
 | mapa con paleta clara fija | The map uses the fixed light "paper" palette (`#f8f7f4`) and no Pico CSS variables — theme-independent legibility. |
+| tema claro fijo (data-theme=light) | `base.html` renders `<html data-theme="light">`, so Pico 2 never follows the OS dark mode (light text on the light paper background would make titles invisible). |
 
 ### 1.4 `tests/test_desk_requests.py` — 12 checks
 

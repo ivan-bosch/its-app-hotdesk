@@ -41,7 +41,11 @@ no separate frontend, no API client, and no JavaScript build step.
 The deliberate absence of a frontend pipeline is a core design decision: one
 person maintains this app, it must open well on a phone, and every dependency
 that would need a build step is a future maintenance tax. The only third-party
-browser assets are two CDN `<script>`/`<link>` tags in `base.html`.
+browser assets are two CDN `<script>`/`<link>` tags in `base.html`; the rest of
+the look comes from one local stylesheet (`app/static/style.css`) — brand
+blue, paper background, cards, wordmark, footer — pinned to a fixed light
+theme with `<html data-theme="light">` so Pico 2 never follows the OS dark
+mode (light text on the light paper background would make titles invisible).
 
 ---
 
