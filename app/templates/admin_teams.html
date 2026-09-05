@@ -2,6 +2,7 @@
 {% block admin_content %}
   <h1>Teams</h1>
 
+  <div class="table-wrap">
   <table>
     <thead>
       <tr><th>Name</th><th>Help Desk team</th><th>Employees</th><th></th></tr>
@@ -21,6 +22,7 @@
       {% endfor %}
     </tbody>
   </table>
+  </div>
 
   <h3>Add team</h3>
   <form method="post" action="/admin/teams">

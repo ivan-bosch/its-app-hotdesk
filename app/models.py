@@ -21,6 +21,13 @@ class BookingStatus(str, Enum):
     waitlisted = "waitlisted"
 
 
+class DeskRequestStatus(str, Enum):
+    pending = "pending"
+    accepted = "accepted"
+    declined = "declined"
+    expired = "expired"
+
+
 class Team(SQLModel, table=True):
     """Employee sub-department. `is_helpdesk` marks the one team (if any) whose
     members can claim the HD-01/02/03 reserved desks (see assignment.py) —
@@ -88,6 +95,23 @@ class Booking(SQLModel, table=True):
     desk_id: int | None = Field(default=None, foreign_key="desk.id")
     status: BookingStatus | None = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class DeskRequest(SQLModel, table=True):
+    """An employee asking the current holder of a desk to cede it for a day.
+    Created from the map ("request this desk"); the occupant accepts or
+    declines via the emailed link. Accepting seats the requester at the desk
+    and re-seats the occupant (see desk_requests.py). A request goes stale
+    (expired) if the desk changes hands or the day passes before a decision."""
+
+    id: int | None = Field(default=None, primary_key=True)
+    requester_id: int = Field(foreign_key="employee.id")
+    occupant_id: int = Field(foreign_key="employee.id")
+    desk_id: int = Field(foreign_key="desk.id")
+    day: date
+    status: DeskRequestStatus = Field(default=DeskRequestStatus.pending)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    decided_at: datetime | None = None
 
 
 class MagicLink(SQLModel, table=True):

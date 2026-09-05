@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+  {% include "_nav.html" %}
+  <h1>Desk request</h1>
+  <div class="card">
+    <p>
+      <strong>{{ requester.name }} {{ requester.surname }}</strong>
+      ({{ requester.email }}) is requesting desk
+      <strong>{{ desk.code }}</strong> for <strong>{{ req.day.isoformat() }}</strong>.
+    </p>
+
+  {% if viewer_is_occupant %}
+    {% if req.status == "pending" and valid %}
+      <p>Do you want to cede the desk? The requester will be seated there and you'll be re-seated by the app.</p>
+      <form method="post" action="/requests/{{ req.id }}/decide">
+        <input type="hidden" name="action" value="accept">
+        <button type="submit">Accept</button>
+      </form>
+      <form method="post" action="/requests/{{ req.id }}/decide">
+        <input type="hidden" name="action" value="decline">
+        <button type="submit">Decline</button>
+      </form>
+    {% elif req.status == "pending" %}
+      <p style="color:#b00000">This request is no longer valid ({{ reason }}).</p>
+    {% else %}
+      <p>Status: <strong>{{ req.status }}</strong>.</p>
+    {% endif %}
+  {% else %}
+    <p>Status: <strong>{{ req.status }}</strong>{% if req.status == "expired" %} ({{ reason }}){% endif %}.</p>
+  {% endif %}
+  </div>
+{% endblock %}

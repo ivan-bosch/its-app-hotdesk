@@ -26,7 +26,7 @@ reserved desks) — "sit near my team" is implemented as picking the free desk
 physically closest to a teammate already seated that day, using each desk's
 x/y position on the map.
 
-See ALGORITHM.md at the repo root for a full walkthrough with worked examples.
+See docs/ALGORITHM.md for a full walkthrough with worked examples.
 """
 
 import os
@@ -44,7 +44,7 @@ BOSS_DESK_CODE = "DESP-01"
 MAX_ASSIGN_RETRIES = 3
 
 # Hour of the day (0-23, server-local time) from which a day's choice can no
-# longer be changed by employees. Overridable via env var. See ALGORITHM.md.
+# longer be changed by employees. Overridable via env var. See docs/ALGORITHM.md.
 BOOKING_LOCK_HOUR = int(os.environ.get("BOOKING_LOCK_HOUR", "8"))
 
 
@@ -179,7 +179,7 @@ def _resolve_day(session: Session, day: date) -> None:
 
     Anyone who landed on or left the waitlist gets a best-effort email after
     the commit. Desk-to-desk moves are silent — you see your current desk
-    when you open the app. See ALGORITHM.md for a walkthrough.
+    when you open the app. See docs/ALGORITHM.md for a walkthrough.
     """
     presencial = session.exec(
         select(Booking).where(Booking.day == day, Booking.mode == Mode.presencial)
@@ -314,7 +314,7 @@ def _resolve_day(session: Session, day: date) -> None:
 def assign_desk(session: Session, booking: Booking, employee: Employee) -> None:
     """Mutates `booking` in place (desk_id, status). Plain greedy algorithm,
     used only by `promote_waitlist` and `admin_reassign` — the normal flow
-    goes through `resolve_day` (see module docstring and ALGORITHM.md)."""
+    goes through `resolve_day` (see module docstring and docs/ALGORITHM.md)."""
     taken_ids = set(
         session.exec(
             select(Booking.desk_id).where(

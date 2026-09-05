@@ -270,6 +270,9 @@ if __name__ == "__main__":
         test_set_password_validation,
         test_set_password_token_single_use,
         test_login_purpose_link_with_password_enters_app,
+        test_empty_password_not_a_bypass,
+        test_failed_validation_keeps_token,
+        test_expired_token_rejected,
         test_old_schema_migration,
     ):
         try:

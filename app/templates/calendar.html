@@ -2,7 +2,7 @@
 {% block content %}
   {% include "_nav.html" %}
   <h1>Hi, {{ employee.name }}</h1>
-  <p style="font-size:0.85rem;">
+  <p class="muted">
     Marking a day "In office" assigns you a desk right away — the whole day is
     re-planned on every change: contested favorite desks go to whoever has more
     seniority, everyone else is seated near their team, and anyone left without
@@ -10,7 +10,7 @@
     one frees up). Each day locks at {{ "%02d"|format(lock_hour) }}:00 that
     morning — after that, the day's choice can't be changed.
   </p>
-  <h2>This week</h2>
+  <h2 style="margin-top:1.25rem;">This week</h2>
   {% for day in days %}
     {% with booking = bookings.get(day), locked = day in locked_days %}
       {% include "_day_row.html" %}

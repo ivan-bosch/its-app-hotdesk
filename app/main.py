@@ -21,6 +21,7 @@ from app.auth import (
 )
 from app.dates import resolve_target_day, upcoming_weekdays
 from app.db import get_session, init_db
+from app.desk_requests import router as desk_requests_router
 from app.forms import parse_date, parse_day, parse_optional_int
 from app.mapview import LANDMARKS, MAP_HEIGHT, MAP_WIDTH, build_map
 from app.models import Booking, Desk, Employee, Mode, Reserved, Team
@@ -32,6 +33,7 @@ _static_dir = Path(__file__).resolve().parent / "static"
 if _static_dir.is_dir():
     app.mount("/static", StaticFiles(directory=str(_static_dir)), name="static")
 app.include_router(admin_router)
+app.include_router(desk_requests_router)
 
 
 @app.on_event("startup")

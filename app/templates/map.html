@@ -16,7 +16,7 @@
     .desk-mine .desk-label { fill: #ffffff; }
   </style>
 
-  <div style="overflow-x: auto; border: 1px solid #d8d3ca; border-radius: 8px; padding: 0.5rem;">
+  <div class="map-frame">
     <svg width="{{ map_w }}" height="{{ map_h }}" viewBox="0 0 {{ map_w }} {{ map_h }}">
       <rect width="100%" height="100%" fill="#f8f7f4"/>
       {% include "_office_landmarks.html" %}
@@ -36,7 +36,7 @@
     </svg>
   </div>
 
-  <p style="margin-top:0.75rem; font-size:0.85rem;">
+  <p class="muted" style="margin-top:0.75rem;">
     <span style="color: #2f6fed;">&#9632;</span> Your desk &nbsp;
     <span style="color: #c9c4ba;">&#9632;</span> Occupied &nbsp;
     <span style="border:1px dashed #9a958c; padding: 0 4px;">&nbsp;</span> Reserved (free) &nbsp;
@@ -46,18 +46,29 @@
   {% set occupied = desks | selectattr('occupant') | list %}
   {% if occupied %}
     <h3 style="margin-top:1rem;">Who's where</h3>
-    <ul>
-      {% for desk in occupied %}
-        <li><strong>{{ desk.code }}</strong> — {{ desk.occupant }}{% if desk.status == 'mine' %} (you){% endif %}</li>
-      {% endfor %}
-    </ul>
+    <div class="card">
+      <ul style="margin-bottom:0;">
+        {% for desk in occupied %}
+          <li>
+            <strong>{{ desk.code }}</strong> — {{ desk.occupant }}{% if desk.status == 'mine' %} (you){% endif %}
+            {% if desk.can_request %}
+              <form method="post" action="/map/request" style="display:inline; margin-left:0.5rem;">
+                <input type="hidden" name="day" value="{{ day.isoformat() }}">
+                <input type="hidden" name="desk_id" value="{{ desk.id }}">
+                <button type="submit" style="font-size:0.75rem;">Request this desk</button>
+              </form>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
   {% endif %}
 
   <div class="grid" style="margin-top:1rem;">
     {% for title, members in roster.sections() if members %}
-      <div>
+      <div class="card">
         <h4>{{ title }} ({{ members|length }})</h4>
-        <ul>
+        <ul style="margin-bottom:0;">
           {% for e in members %}<li>{{ e.name }} {{ e.surname }}</li>{% endfor %}
         </ul>
       </div>

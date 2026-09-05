@@ -2,8 +2,8 @@
 {% block content %}
   {% include "_nav.html" %}
   <h1>Settings</h1>
-  <p>{{ employee.email }}</p>
-  <form method="post" action="/settings">
+  <p class="muted">{{ employee.email }}</p>
+  <form method="post" action="/settings" class="card">
     <label>First name
       <input type="text" name="name" value="{{ employee.name or '' }}" required>
     </label>
@@ -22,7 +22,7 @@
       <input type="date" name="hire_date"
              value="{{ (employee.hire_date_proposed or employee.hire_date).isoformat() if (employee.hire_date_proposed or employee.hire_date) else '' }}">
     </label>
-    <p style="font-size:0.85rem;">
+    <p class="muted">
       Approved: <strong>{{ employee.hire_date.isoformat() if employee.hire_date else 'not set' }}</strong>
       {% if employee.hire_date_proposed and employee.hire_date_proposed != employee.hire_date %}
         · <em>pending admin approval: {{ employee.hire_date_proposed.isoformat() }}</em>
@@ -42,7 +42,7 @@
       .pf-selected .pf-label { fill: #ffffff; }
     </style>
 
-    <div style="overflow-x: auto; border: 1px solid #d8d3ca; border-radius: 8px; padding: 0.5rem; margin: 0.5rem 0;">
+    <div class="map-frame" style="margin: 0.5rem 0;">
       <svg width="{{ map_w }}" height="{{ map_h }}" viewBox="0 0 {{ map_w }} {{ map_h }}">
         <rect width="100%" height="100%" fill="#f8f7f4"/>
         {% include "_office_landmarks.html" %}
@@ -56,7 +56,7 @@
         {% endfor %}
       </svg>
     </div>
-    <p style="font-size:0.85rem;">
+    <p class="muted">
       Selected: <strong id="favorite_label">
         {% for desk in desks %}{% if employee.favorite_desk_id == desk.id %}{{ desk.code }}{% endif %}{% endfor %}
       </strong>

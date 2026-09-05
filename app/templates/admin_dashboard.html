@@ -3,29 +3,29 @@
   <h1>Dashboard</h1>
   <p>Signed in as <strong>{{ admin.username }}</strong></p>
   <div class="grid">
-    <article>
+    <article class="card">
       <h3>{{ employee_count }}</h3>
-      <p>Employees</p>
+      <p class="muted">Employees</p>
     </article>
-    <article>
+    <article class="card">
       <h3>{{ team_count }}</h3>
-      <p>Teams</p>
+      <p class="muted">Teams</p>
     </article>
-    <article>
+    <article class="card">
       <h3>{{ stats.assigned }}</h3>
-      <p>Assigned desks today ({{ today.strftime('%a %d/%m') }})</p>
+      <p class="muted">Assigned desks today ({{ today.strftime('%a %d/%m') }})</p>
     </article>
-    <article>
+    <article class="card">
       <h3>{{ stats.waitlisted }}</h3>
-      <p>Waitlisted today</p>
+      <p class="muted">Waitlisted today</p>
     </article>
-    <article>
+    <article class="card">
       <h3>{{ stats.remote }}</h3>
-      <p>Remote today</p>
+      <p class="muted">Remote today</p>
     </article>
-    <article>
+    <article class="card">
       <h3>{{ stats.vacation }}</h3>
-      <p>On vacation today</p>
+      <p class="muted">On vacation today</p>
     </article>
   </div>
 {% endblock %}

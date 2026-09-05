@@ -2,7 +2,8 @@
 notifications).
 
 Sends via SMTP when SMTP_HOST is configured (works with Gmail, Office365, or
-any institutional mail relay — see README/SETUP.md for the env vars). Falls
+any institutional mail relay — see docs/DEPLOYMENT.md for the env vars).
+Falls
 back to printing to the server console when SMTP_HOST is unset, so everything
 still works end-to-end in local development without any mail server.
 

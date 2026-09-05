@@ -1,0 +1,139 @@
+/* Hotdesk ITS — single stylesheet, no build step.
+   Loaded after Pico.css, so the --pico-* overrides below win. */
+
+:root {
+  --hd-blue: #2f6fed;
+  --hd-blue-dark: #1d5cd6;
+  --hd-blue-tint: #eaf1fe;
+  --hd-paper: #f8f7f4;
+  --hd-card: #ffffff;
+  --hd-border: #e4e0d8;
+  --hd-ink: #26241f;
+  --hd-muted: #6f6a61;
+  --hd-shadow: 0 1px 2px rgba(38, 36, 31, 0.06), 0 2px 8px rgba(38, 36, 31, 0.05);
+  --hd-radius: 10px;
+
+  /* Pico brand adoption: buttons, links, form focus all take the brand blue */
+  --pico-primary: var(--hd-blue);
+  --pico-primary-hover: var(--hd-blue-dark);
+  --pico-primary-focus: var(--hd-blue-tint);
+  --pico-primary-inverse: #ffffff;
+  --pico-form-element-active-border-color: var(--hd-blue);
+  --pico-form-element-focus-color: var(--hd-blue-tint);
+}
+
+body {
+  background: var(--hd-paper);
+  color: var(--hd-ink);
+}
+
+h1 {
+  letter-spacing: -0.02em;
+}
+
+/* --- Wordmark ------------------------------------------------------------- */
+
+.wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-weight: 700;
+  font-size: 1.1rem;
+  letter-spacing: -0.02em;
+  color: var(--hd-ink);
+  text-decoration: none;
+}
+
+.wordmark svg {
+  display: block;
+}
+
+/* --- Cards ---------------------------------------------------------------- */
+
+.card {
+  background: var(--hd-card);
+  border: 1px solid var(--hd-border);
+  border-radius: var(--hd-radius);
+  box-shadow: var(--hd-shadow);
+  padding: 0.9rem 1rem;
+}
+
+.muted {
+  color: var(--hd-muted);
+  font-size: 0.85rem;
+}
+
+/* --- Employee nav bar ------------------------------------------------------ */
+
+.hd-nav {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+  padding: 0.45rem 0.9rem;
+  background: var(--hd-card);
+  border: 1px solid var(--hd-border);
+  border-radius: var(--hd-radius);
+  box-shadow: var(--hd-shadow);
+}
+
+.hd-nav .wordmark {
+  margin-right: auto;
+}
+
+.hd-nav a:not(.wordmark) {
+  font-size: 0.9rem;
+  color: var(--hd-muted);
+  text-decoration: none;
+}
+
+.hd-nav a:not(.wordmark):hover {
+  color: var(--hd-blue);
+}
+
+/* --- Day picker (map / reassign) ------------------------------------------- */
+
+.day-picker {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 480px) {
+  .day-picker {
+    grid-auto-columns: minmax(92px, 1fr);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* --- Map frame (horizontal scroll keeps desk labels legible on phones) ----- */
+
+.map-frame {
+  overflow-x: auto;
+  border: 1px solid var(--hd-border);
+  border-radius: var(--hd-radius);
+  box-shadow: var(--hd-shadow);
+  background: var(--hd-paper);
+  padding: 0.5rem;
+}
+
+/* --- Tables (admin): scroll on narrow screens instead of overflowing ------- */
+
+.table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* --- Footer ----------------------------------------------------------------- */
+
+.hd-footer {
+  margin-top: 2rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--hd-border);
+  font-size: 0.75rem;
+  color: var(--hd-muted);
+}

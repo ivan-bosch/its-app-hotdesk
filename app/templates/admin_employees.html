@@ -2,6 +2,7 @@
 {% block admin_content %}
   <h1>Employees</h1>
 
+  <div class="table-wrap">
   <table>
     <thead>
       <tr><th>Email</th><th>Name</th><th>Team</th><th>Boss</th><th>Hire date</th><th></th></tr>
@@ -39,6 +40,7 @@
       {% endfor %}
     </tbody>
   </table>
+  </div>
 
   <h3>Add employee</h3>
   <form method="post" action="/admin/employees">
@@ -72,7 +74,7 @@
   </form>
   <p style="font-size:0.85rem;">
     Hire date is used to break ties when two people want the same favorite
-    desk in the daily batch resolution — see <code>ALGORITHM.md</code>.
+    desk in the daily batch resolution — see <code>docs/ALGORITHM.md</code>.
     Employees can propose their own hire date from their profile; it only
     counts once approved here.
   </p>

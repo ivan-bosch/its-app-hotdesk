@@ -11,6 +11,7 @@ from datetime import date
 
 from sqlmodel import Session, select
 
+from app.assignment import _is_eligible
 from app.models import Booking, BookingStatus, Desk, Employee, Mode, Reserved, Zone
 
 DESK_W, DESK_H = 60, 38
@@ -28,6 +29,7 @@ MAP_WIDTH, MAP_HEIGHT = 800, 340
 
 @dataclass
 class DeskBox:
+    id: int
     code: str
     x: int
     y: int
@@ -35,6 +37,9 @@ class DeskBox:
     h: int = DESK_H
     status: str = "free"  # free | mine | occupied | reserved-empty
     occupant: str | None = None
+    # True when the viewer can "request this desk" from the map: someone
+    # else holds it and the viewer is eligible for it (see desk_requests.py).
+    can_request: bool = False
 
 
 @dataclass
@@ -99,11 +104,13 @@ def build_map(
 
         desk_boxes.append(
             DeskBox(
+                id=d.id,
                 code=d.code,
                 x=d.x,
                 y=d.y,
                 status=status,
                 occupant=f"{occupant.name} {occupant.surname}" if occupant else None,
+                can_request=status == "occupied" and _is_eligible(session, d, viewer),
             )
         )
         zone_desks.setdefault(d.zone_id, []).append(d)

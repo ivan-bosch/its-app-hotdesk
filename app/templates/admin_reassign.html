@@ -5,6 +5,7 @@
   {% set picker_url = "/admin/reassign" %}
   {% include "_day_picker.html" %}
 
+  <div class="table-wrap">
   <table>
     <thead>
       <tr><th>Employee</th><th>Status</th><th>Desk</th><th></th></tr>
@@ -31,7 +32,8 @@
       {% endfor %}
     </tbody>
   </table>
-  <p style="font-size:0.85rem;">
+  </div>
+  <p class="muted">
     Choosing a desk already held by someone else that day bumps them to the waitlist —
     they are automatically re-evaluated for another free desk right away.
   </p>

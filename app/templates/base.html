@@ -5,12 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="referrer" content="no-referrer">
   <title>Hotdesk ITS</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232f6fed'/%3E%3Crect x='13' y='9' width='9' height='6' rx='1' fill='white'/%3E%3Cpath d='M6 19h20v3H6z' fill='white'/%3E%3Cpath d='M9 22v4M23 22v4' stroke='white' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+  <link rel="stylesheet" href="/static/style.css">
   <script src="https://unpkg.com/htmx.org@1.9.12"></script>
 </head>
 <body>
   <main class="container" style="max-width: {% block container_width %}640px{% endblock %}; padding-top: 1.5rem;">
     {% block content %}{% endblock %}
+    <footer class="hd-footer">Hotdesk ITS · IRB Barcelona</footer>
   </main>
 </body>
 </html>

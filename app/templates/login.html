@@ -1,14 +1,25 @@
 {% extends "base.html" %}
 {% block content %}
-  <h1>Hotdesk ITS</h1>
-  <p>Sign in with your email and password. First time here? Leave the password empty and we'll email you a setup link.</p>
-  {% if error %}<p style="color:#b00000">{{ error }}</p>{% endif %}
-  <form method="post" action="/login">
-    <input type="email" name="email" placeholder="your.email@irbbarcelona.org" required autofocus>
-    <input type="password" name="password" placeholder="password (empty = send me a setup link)">
-    <button type="submit">Sign in</button>
-  </form>
-  <form method="post" action="/forgot" style="margin-top:1em">
-    <button type="submit" style="border:0;background:none;cursor:pointer;padding:0">Forgot your password?</button>
-  </form>
+  <div class="card" style="max-width: 440px; margin: 1.5rem auto;">
+    <a class="wordmark" href="/login">
+      <svg width="24" height="24" viewBox="0 0 32 32" aria-hidden="true">
+        <rect width="32" height="32" rx="7" fill="#2f6fed"/>
+        <rect x="13" y="9" width="9" height="6" rx="1" fill="#ffffff"/>
+        <path d="M6 19h20v3H6z" fill="#ffffff"/>
+        <path d="M9 22v4M23 22v4" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round"/>
+      </svg>
+      Hotdesk
+    </a>
+    <h1 style="font-size: 1.3rem; margin-top: 1rem;">Sign in</h1>
+    <p class="muted">Sign in with your email and password. First time here? Leave the password empty and we'll email you a setup link.</p>
+    {% if error %}<p style="color:#b00000">{{ error }}</p>{% endif %}
+    <form method="post" action="/login">
+      <input type="email" name="email" placeholder="your.email@irbbarcelona.org" required autofocus>
+      <input type="password" name="password" placeholder="password (empty = send me a setup link)">
+      <button type="submit">Sign in</button>
+    </form>
+    <form method="post" action="/forgot" style="margin-top:1em">
+      <button type="submit" style="border:0;background:none;cursor:pointer;padding:0">Forgot your password?</button>
+    </form>
+  </div>
 {% endblock %}

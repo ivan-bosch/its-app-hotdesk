@@ -142,6 +142,24 @@ def test_map_fixed_light_palette():
                f"fondo papel #f8f7f4: {has_paper}, sin vars pico en el mapa: {no_pico_vars}")
 
 
+def test_waitlisted_calendar_row_text():
+    """Fill the office (14 general desks) so the 15th declarer is waitlisted,
+    then check the calendar row renders a coherent message (regression: the
+    text used to be mangled, closing the <p> mid-sentence)."""
+    from app.dates import upcoming_weekdays
+    day = upcoming_weekdays()[-1]  # farthest day in the window: never locked
+    with TestClient(app, follow_redirects=False, raise_server_exceptions=False) as client:
+        for i in range(15):
+            register(client, f"wl{i}@example.com")
+            r = client.post("/calendar/book", data={"day": day.isoformat(), "mode": "presencial"})
+            assert r.status_code == 200, r.text
+        r = client.get("/calendar")
+        ok = (r.status_code == 200 and "No free desk" in r.text
+              and "waitlist" in r.text.lower() and "</p>desk" not in r.text)
+        report("fila waitlist con texto coherente", ok,
+               f"GET /calendar -> {r.status_code}, 'No free desk': {'No free desk' in r.text}, sin texto troceado: {'</p>desk' not in r.text}")
+
+
 if __name__ == "__main__":
     import traceback
 
@@ -154,6 +172,7 @@ if __name__ == "__main__":
         test_map_has_plan_your_week,
         test_settings_post_primary_target,
         test_map_fixed_light_palette,
+        test_waitlisted_calendar_row_text,
     ):
         try:
             test()
