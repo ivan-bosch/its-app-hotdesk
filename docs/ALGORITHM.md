@@ -81,8 +81,38 @@ extra rules:
   (`d.code != BOSS_DESK_CODE`), so it stays free for the boss even if the
   boss hasn't declared yet.
 - A non-helpdesk employee who picks an `HD-*` desk as their favorite simply
-  never matches it (eligibility fails in step 2); the settings form
-  silently clears such a choice on submit.
+  never matches it (eligibility fails in step 2); the settings form marks
+  those desks non-clickable for them and silently clears such a choice on
+  submit (defense in depth).
+
+### Released Help Desk desks
+
+The HD row of the table is the *strict* rule, and it applies to **favorites**
+and **desk requests**: only the Help Desk team can make an `HD-*` desk its
+favorite, and a non-Help-Desk employee can't "request this desk" from an
+`HD-*` occupant.
+
+**Seating** uses a relaxed rule (`_can_seat`, fed by `released_hd_desks`):
+an `HD-*` desk is **claimed** by the Help Desk employees who favor it, and it
+is **released to the general pool** for a day once every claimant has marked
+that day `vacation` or `teletrabajo`. Two corner cases:
+
+- **Undeclared claimants keep it reserved.** A Help Desk member who favors
+  `HD-02` and has no booking for the day has not released it — they might
+  still show up (Help Desk staff are usually `presencial`-pattern, §9, but
+  the safe default is keeping it out of the pool until they declare
+  remote or vacation).
+- **Unclaimed desks are always released.** An `HD-*` desk no Help Desk
+  employee favors (the "three desks, two people" case) is part of the
+  general pool all the time.
+
+While released, the desk is a normal pool member in step 3 and
+`assign_desk` — anyone can be seated there by the usual proximity rules, and
+the map shows it as **free** instead of the dashed "reserved". When a
+claimant comes back, the next recalc hands the desk back to them: step 2
+seats the claimant at their favorite *before* any non-Help-Desk employee is
+seated in step 3, and the person who had the desk is re-seated elsewhere (a
+silent desk-to-desk move, §8).
 
 ---
 
@@ -127,8 +157,9 @@ resolve_day(day):
             # losers stay "remaining" for step 3
 
     # STEP 3 — Team-clustering fallback, in arrival order
+    # (released HD desks are in the pool for everyone, see §3)
     for each remaining employee, sorted by (booking.created_at, emp.id):
-        eligible_free = free desks they're eligible for, minus DESP-01
+        eligible_free = free desks they can be seated at, minus DESP-01
         if eligible_free is empty:
             b.status = waitlisted; continue
         teammate_desks = desks held (this pass) by seated same-team members
@@ -137,7 +168,12 @@ resolve_day(day):
         elif employee has a favorite:
             best = argmin over eligible_free of (distance to favorite, code)
         else:
-            best = argmin over eligible_free of code
+            if employee is helpdesk:
+                best = argmin over eligible_free of code     # HD-first: their zone
+            else:
+                best = argmin over eligible_free of (is_released_hd, code)
+                # released HD desks sort after the P desks, so the first
+                # declarer of the day fills the regular rows first
         seat employee at best
 
     commit()
@@ -188,7 +224,10 @@ employee id — who declared first). Each gets, in priority order:
 2. If no teammate is seated yet: the free eligible desk **nearest to their
    own (lost) favorite** — you still end up in the neighborhood you like.
 3. If they have no favorite either: the **lowest free desk code**
-   (deterministic, stable).
+   (deterministic, stable). For non-Help-Desk employees the released `HD-*`
+   desks sort after the `P*` desks in this fallback, so the first declarer
+   of the day fills the regular rows before the entrance block; Help Desk
+   employees use plain code order (the HD cluster is their zone).
 
 Every `argmin` breaks distance ties by desk code, so the result is fully
 deterministic. Processing order is arrival order, *not* sorted by team —
@@ -245,7 +284,9 @@ the whole day would be wrong. Decision order:
 6. Else → waitlisted.
 
 Like step 3 of `resolve_day`, it excludes the boss's desk from non-boss
-candidates and breaks distance ties by desk code.
+candidates, breaks distance ties by desk code, and includes **released Help
+Desk desks** in the pool (§3) with the same P-before-HD code fallback for
+non-Help-Desk employees.
 
 ---
 
@@ -358,6 +399,11 @@ desk is ever assigned, and switching to it frees any desk you hold that day
 (triggering a full recalc, same as switching to remote). It exists as a
 separate value purely for labeling — the map view shows "on vacation" apart
 from "working remotely".
+
+One extra consequence for Help Desk staff: marking a day as vacation (or
+remote) **releases their favorited `HD-*` desk to the general pool** for that
+day (§3) — the waitlist can be promoted onto it, and it shows as free on the
+map.
 
 Vacation days are managed on the **year-long calendar page**
 (`/vacation?month=YYYY-MM`, see [API.md](API.md) §Vacation), not per day in
@@ -502,6 +548,26 @@ onto P05:
 
 Nobody else moved: the override was surgical.
 
+### Example E — a Help Desk member on vacation releases their desk
+
+María, Juan and Carlos (Help Desk) favor HD-01, HD-02 and HD-03. Twelve
+other employees declare Tuesday.
+
+1. Carlos marks Tuesday as **vacation** on the year calendar (or "remote" in
+   the planner). His HD-03 is released to the pool (§3).
+2. Each of the twelve declarations re-plans the day. Step 2 seats María at
+   HD-01 and Juan at HD-02 (their free favorites). Step 3 seats the twelve —
+   the eleven `P*` desks plus the released **HD-03** hold exactly twelve
+   people, so nobody is waitlisted.
+3. On the map, HD-03 renders as a normal desk (solid border), while an `HD-*`
+   desk whose claimant hasn't declared yet still shows the dashed "reserved"
+   look.
+4. Wednesday, Carlos is back: his "in office" (or the `presencial`-pattern
+   auto-booking, §9) triggers a recalc — step 2 hands him HD-03 back *before*
+   any non-Help-Desk employee is seated in step 3, and the person who had it
+   Tuesday is re-seated elsewhere (silent move, §8). The desk is reserved
+   for the team again.
+
 ---
 
 ## 13. Invariants
@@ -515,8 +581,10 @@ algorithm and the DB constraints):
 3. **Resolved state:** after `resolve_day`, every presencial booking is
    either `assigned` (with a `desk_id`) or `waitlisted` (`desk_id = NULL`).
 4. **Reserved desks stay reserved:** `DESP-01` is only ever held by the
-   boss; `HD-*` only by the `is_helpdesk` team (eligibility is checked in
-   every seating step).
+   boss. `HD-*` is held by the `is_helpdesk` team, or — only on a day when
+   the desk is **released** (every claimant away, §3) — by a non-Help-Desk
+   employee; while released it is part of the seating pool like any `P*`
+   desk.
 5. **Determinism:** the same set of bookings (including `created_at`)
    always produces the same assignment. There is no randomness anywhere in
    the algorithm.

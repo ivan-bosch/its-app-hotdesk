@@ -51,6 +51,12 @@ pipeline.
   Accepting seats the requester there and re-seats the occupant.
 - **Work pattern** (`/settings`): hybrid (choose per day) or in person
   (auto-booked in office every working day, no remote option).
+- **Help Desk desks** (`HD-01/02/03`): reserved for the Help Desk team —
+  only the team can favorite them. When the team member who favors an HD
+  desk marks a day as vacation or remote, that desk is **released to the
+  general pool** for that day (it shows as free on the map and the
+  waitlist can be promoted onto it); the desk is theirs again as soon as
+  they're back.
 - **Vacation** (`/vacation`): a month-grid calendar for the current year;
   tapping a day saves the mark immediately, even months ahead.
 
@@ -152,7 +158,9 @@ an administrator:
   list: add, or delete a team (its employees are left without a team rather
   than blocking the deletion). Exactly one team can be flagged
   `is_helpdesk`, which makes its members eligible for the `HD-01/02/03`
-  reserved desks.
+  reserved desks (a released one — its claimant away that day — joins the
+  general pool; see [docs/ALGORITHM.md](docs/ALGORITHM.md) §Released Help
+  Desk desks).
 - **Reassign desks** (`/admin/reassign`) — for a chosen day, force any
   employee's desk to a specific one (or the waitlist), regardless of
   favorite/proximity rules and the day lock. The previous holder is bumped

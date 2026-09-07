@@ -188,6 +188,7 @@ def settings_form(
 ):
     desks = session.exec(select(Desk).where(Desk.reserved != Reserved.boss)).all()
     teams = session.exec(select(Team)).all()
+    team = session.get(Team, employee.team_id or 0)
     return templates.TemplateResponse(
         request,
         "settings.html",
@@ -195,6 +196,7 @@ def settings_form(
             "employee": employee,
             "desks": desks,
             "teams": teams,
+            "is_helpdesk": bool(team and team.is_helpdesk),
             "landmarks": LANDMARKS,
             "map_w": MAP_WIDTH,
             "map_h": MAP_HEIGHT,

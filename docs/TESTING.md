@@ -7,7 +7,7 @@ them, the design of the harness, and how to add a test.
 
 ## 1. The suites
 
-Five end-to-end suites live in `tests/`. Each one drives the **real**
+Six end-to-end suites live in `tests/`. Each one drives the **real**
 FastAPI app against a **real** SQLite database — no mocks, no stubs, no
 pytest. They are plain Python scripts with their own tiny runner:
 
@@ -17,6 +17,7 @@ uv run --with httpx python tests/test_seniority_flow.py
 uv run --with httpx python tests/test_home_settings.py
 uv run --with httpx python tests/test_desk_requests.py
 uv run --with httpx python tests/test_work_patterns.py
+uv run --with httpx python tests/test_hd_release.py
 ```
 
 `--with httpx` is needed because `fastapi.testclient.TestClient` requires
@@ -125,6 +126,27 @@ Work pattern (hybrid / in-person) and the year-long vacation calendar:
 | fila presencial: 'automatic' y sin botones | A `presencial` employee's day row shows "In office (automatic)" with no mode buttons. |
 | calendario muestra 'On vacation' en el día marcado | A marked vacation day renders "On vacation" in the week planner. |
 | mes fuera del año → 400, mes del año → 200 | Month navigation is clamped to the current year. |
+
+### 1.6 `tests/test_hd_release.py` — 10 checks
+
+Help Desk desk release: an `HD-*` desk is claimed by the Help Desk employees
+who favor it, and it joins the general pool for a day once every claimant
+has marked that day vacation or remote (see [ALGORITHM.md](ALGORITHM.md)
+§Released Help Desk desks). 15 shared people (3 Help Desk staff favoring
+HD-01/02/03, 12 general staff) across 4 unlocked days:
+
+| Check | What it proves |
+| --- | --- |
+| setup: 15 personas registradas | Registration of the shared cast (also verifies 4 unlocked days exist in the window). |
+| vacacion libera el HD del que la marca | With the third HD member on vacation, the 12th general employee is seated at the released HD desk — nobody waitlisted. |
+| remote tambien libera el HD del que lo marca | Switching the same day to `teletrabajo` releases the desk the same way. |
+| HD sin titular presente entran en el pool | Two HD members away: the released desks take general staff (no waitlist) while the present member keeps her favorite. |
+| mapa: HD liberado se ve libre, HD sin declarar sigue punteado | A released empty HD desk renders `desk-free`; an undeclared claimant's desk still renders `desk-reserved` (dashed). |
+| HD sin declarar sigue reservado (puede llegar) | No claimant declared yet → all three HD desks stay out of the pool; the 12th general employee is waitlisted. |
+| HD que declara in-office se sienta y sigue reservado | A claimant declaring in office gets their favorite and the desk stays reserved for the team. |
+| HD pasa a remote -> el waitlist sube a su HD | The claimant switching to remote releases the desk and the waitlisted employee is promoted onto it. |
+| settings: HD no clicable para no-HD, normal para HD | The favorite picker renders `pf-locked` HD desks for non-Help-Desk employees and none for a Help Desk employee. |
+| no-HD no puede poner un HD de favorito (el servidor lo descarta) | `POST /settings` with an HD favorite from a non-Help-Desk employee stores `None` (defense in depth). |
 
 ---
 

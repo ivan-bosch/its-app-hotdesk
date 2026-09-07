@@ -50,6 +50,8 @@
       .pf-desk:hover { stroke: #2f6fed; }
       .pf-desk.pf-selected { fill: #2f6fed; stroke: #2f6fed; }
       .pf-desk.pf-helpdesk { stroke-dasharray: 4 3; }
+      .pf-desk.pf-locked { cursor: default; opacity: 0.5; }
+      .pf-desk.pf-locked:hover { stroke: #9a958c; }
       .pf-label { font-size: 10px; fill: #3d3a34; text-anchor: middle; dominant-baseline: middle; pointer-events: none; }
       .pf-selected .pf-label { fill: #ffffff; }
     </style>
@@ -60,7 +62,7 @@
         {% include "_office_landmarks.html" %}
 
         {% for desk in desks %}
-          <g class="pf-desk {{ 'pf-selected' if employee.favorite_desk_id == desk.id else '' }} {{ 'pf-helpdesk' if desk.reserved.value == 'helpdesk' else '' }}"
+          <g class="pf-desk {{ 'pf-selected' if employee.favorite_desk_id == desk.id else '' }} {{ 'pf-helpdesk' if desk.reserved.value == 'helpdesk' else '' }} {{ 'pf-locked' if (desk.reserved.value == 'helpdesk' and not is_helpdesk) else '' }}"
              data-id="{{ desk.id }}" data-code="{{ desk.code }}">
             <rect x="{{ desk.x }}" y="{{ desk.y }}" width="60" height="38" rx="6"/>
             <text class="pf-label" x="{{ desk.x + 30 }}" y="{{ desk.y + 19 }}">{{ desk.code }}</text>
@@ -74,7 +76,13 @@
       </strong>
       <span id="favorite_empty" {% if employee.favorite_desk_id %}style="display:none"{% endif %}>No preference</span>
       · <a href="#" id="favorite_clear">clear selection</a>
-      <br><small>Desks with a dashed border are Help Desk desks — only honored if your team is the Help Desk team.</small>
+      <br><small>
+        {% if is_helpdesk %}
+        Desks with a dashed border are Help Desk desks — you can favorite any of them.
+        {% else %}
+        Desks with a dashed border are Help Desk desks and can't be a favorite outside the Help Desk team.
+        {% endif %}
+      </small>
     </p>
 
     <button type="submit">Save</button>
@@ -88,6 +96,7 @@
 
       document.querySelectorAll('.pf-desk').forEach(function (g) {
         g.addEventListener('click', function () {
+          if (g.classList.contains('pf-locked')) return;
           document.querySelectorAll('.pf-desk').forEach(function (o) { o.classList.remove('pf-selected'); });
           g.classList.add('pf-selected');
           input.value = g.dataset.id;

@@ -131,6 +131,41 @@ def _is_eligible(session: Session, desk: Desk, employee: Employee) -> bool:
     return False
 
 
+def released_hd_desks(session: Session, day: date) -> set[int]:
+    """Help Desk desks released to the general pool on `day`.
+
+    An HD desk is claimed by the Help Desk employees who have it as a
+    favorite. A claimed desk stays reserved for the Help Desk team until
+    every claimant has marked `day` as vacation or remote — a missing
+    booking keeps it reserved, because the person might still show up.
+    A desk no Help Desk employee favors is released all the time."""
+    bookings = {
+        b.employee_id: b.mode
+        for b in session.exec(select(Booking).where(Booking.day == day)).all()
+    }
+    claimants: dict[int, list[int]] = {}
+    for e in session.exec(select(Employee)).all():
+        if e.favorite_desk_id and _is_helpdesk(session, e):
+            claimants.setdefault(e.favorite_desk_id, []).append(e.id)
+    released = set()
+    for d in session.exec(select(Desk).where(Desk.reserved == Reserved.helpdesk)).all():
+        ids = claimants.get(d.id, [])
+        if not ids or all(
+            bookings.get(eid) in (Mode.vacation, Mode.teletrabajo) for eid in ids
+        ):
+            released.add(d.id)
+    return released
+
+
+def _can_seat(session: Session, desk: Desk, employee: Employee, released_hd: set[int]) -> bool:
+    """Seating-only eligibility (resolve step 3 / `assign_desk`). Same as
+    `_is_eligible` except a released Help Desk desk is open to everyone —
+    favorites and "request this desk" keep the strict rule."""
+    if desk.reserved != Reserved.helpdesk:
+        return _is_eligible(session, desk, employee)
+    return _is_helpdesk(session, employee) or desk.id in released_hd
+
+
 def _distance(a: Desk, b: Desk) -> float:
     return ((a.x - b.x) ** 2 + (a.y - b.y) ** 2) ** 0.5
 
@@ -172,9 +207,11 @@ def _resolve_day(session: Session, day: date) -> None:
        the rest fall through to step 3. Ties broken by whoever declared
        first (`Booking.created_at`).
     3. Team-clustering fallback for everyone left, processed in arrival
-       order: nearest free eligible desk to an already-seated teammate, then
-       nearest to their own (lost) favorite as an anchor, then lowest free
-       desk code.
+        order: nearest free eligible desk to an already-seated teammate, then
+        nearest to their own (lost) favorite as an anchor, then lowest free
+        desk code. Eligibility here includes released Help Desk desks
+        (`released_hd_desks`) for anyone; for non-Help-Desk employees the
+        code fallback puts the P desks before the released HD ones.
     4. No eligible free desk left -> waitlisted.
 
     Anyone who landed on or left the waitlist gets a best-effort email after
@@ -188,6 +225,7 @@ def _resolve_day(session: Session, day: date) -> None:
         return
 
     all_desks = {d.id: d for d in session.exec(select(Desk)).all()}
+    released_hd = released_hd_desks(session, day)
     employees = {b.employee_id: session.get(Employee, b.employee_id) for b in presencial}
     by_employee = {b.employee_id: b for b in presencial}
     remaining_ids = set(by_employee.keys())
@@ -209,7 +247,7 @@ def _resolve_day(session: Session, day: date) -> None:
         return desk_id not in assigned_desk_of
 
     def eligible_free_desks(employee: Employee) -> list[Desk]:
-        return [d for d in all_desks.values() if is_free(d.id) and _is_eligible(session, d, employee)]
+        return [d for d in all_desks.values() if is_free(d.id) and _can_seat(session, d, employee, released_hd)]
 
     def place(employee_id: int, desk: Desk) -> None:
         booking = by_employee[employee_id]
@@ -285,8 +323,13 @@ def _resolve_day(session: Session, day: date) -> None:
         elif employee.favorite_desk_id and employee.favorite_desk_id in all_desks:
             fav_desk = all_desks[employee.favorite_desk_id]
             best = min(eligible_free, key=lambda d: (_distance(d, fav_desk), d.code))
-        else:
+        elif _is_helpdesk(session, employee):
             best = min(eligible_free, key=lambda d: d.code)
+        else:
+            # No anchor at all: released Help Desk desks sort after the P
+            # desks, so the first declarer of the day fills the regular rows
+            # before the entrance block.
+            best = min(eligible_free, key=lambda d: (d.reserved == Reserved.helpdesk, d.code))
 
         place(emp_id, best)
 
@@ -314,7 +357,8 @@ def _resolve_day(session: Session, day: date) -> None:
 def assign_desk(session: Session, booking: Booking, employee: Employee) -> None:
     """Mutates `booking` in place (desk_id, status). Plain greedy algorithm,
     used only by `promote_waitlist` and `admin_reassign` — the normal flow
-    goes through `resolve_day` (see module docstring and docs/ALGORITHM.md)."""
+    goes through `resolve_day` (see module docstring and docs/ALGORITHM.md).
+    Like `resolve_day`, released Help Desk desks are part of the pool."""
     taken_ids = set(
         session.exec(
             select(Booking.desk_id).where(
@@ -325,6 +369,7 @@ def assign_desk(session: Session, booking: Booking, employee: Employee) -> None:
         ).all()
     )
     free = [d for d in session.exec(select(Desk)).all() if d.id not in taken_ids]
+    released_hd = released_hd_desks(session, booking.day)
 
     # 1. Boss always gets his desk.
     if employee.is_boss:
@@ -337,12 +382,12 @@ def assign_desk(session: Session, booking: Booking, employee: Employee) -> None:
     # 2. Favorite desk, if free and eligible.
     if employee.favorite_desk_id:
         fav = next((d for d in free if d.id == employee.favorite_desk_id), None)
-        if fav and _is_eligible(session, fav, employee):
+        if fav and _can_seat(session, fav, employee, released_hd):
             booking.desk_id = fav.id
             booking.status = BookingStatus.assigned
             return
 
-    eligible_free = [d for d in free if _is_eligible(session, d, employee) and d.reserved != Reserved.boss]
+    eligible_free = [d for d in free if _can_seat(session, d, employee, released_hd) and d.reserved != Reserved.boss]
     if not eligible_free:
         booking.desk_id = None
         booking.status = BookingStatus.waitlisted
@@ -371,8 +416,11 @@ def assign_desk(session: Session, booking: Booking, employee: Employee) -> None:
         best = min(eligible_free, key=lambda d: (_distance(d, fav_desk), d.code)) if fav_desk else min(
             eligible_free, key=lambda d: d.code
         )
-    else:
+    elif _is_helpdesk(session, employee):
         best = min(eligible_free, key=lambda d: d.code)
+    else:
+        # Released Help Desk desks sort after the P desks (see `_resolve_day`).
+        best = min(eligible_free, key=lambda d: (d.reserved == Reserved.helpdesk, d.code))
 
     booking.desk_id = best.id
     booking.status = BookingStatus.assigned

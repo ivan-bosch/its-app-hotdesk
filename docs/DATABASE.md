@@ -55,7 +55,7 @@ shown rather than dropped.
 | --- | --- | --- | --- |
 | `id` | INTEGER | PK, autoincrement | |
 | `name` | VARCHAR | UNIQUE | Display name. |
-| `is_helpdesk` | BOOLEAN | default `false` | At most one team may be flagged (enforced in `admin.py`, not by a DB constraint). Its members are the only ones eligible for the `HD-01/02/03` desks. |
+| `is_helpdesk` | BOOLEAN | default `false` | At most one team may be flagged (enforced in `admin.py`, not by a DB constraint). Its members are the only ones who can favorite the `HD-01/02/03` desks; an `HD-*` desk is released to the general pool for a day when all of its favoriting members are away that day (see [ALGORITHM.md](ALGORITHM.md) §Released Help Desk desks). |
 
 ### `zone`
 
@@ -76,7 +76,7 @@ coordinates (see [ALGORITHM.md](ALGORITHM.md)).
 | `id` | INTEGER | PK, autoincrement | |
 | `code` | VARCHAR | UNIQUE | `DESP-01`, `HD-01…03`, `P01…P11`. |
 | `zone_id` | INTEGER | FK → `zone.id` | |
-| `reserved` | VARCHAR | default `'none'` | `Reserved` enum. `boss` → only `Employee.is_boss` may be seated there; `helpdesk` → only members of the `is_helpdesk` team. |
+| `reserved` | VARCHAR | default `'none'` | `Reserved` enum. `boss` → only `Employee.is_boss` may be seated there; `helpdesk` → the `is_helpdesk` team, except on days when the desk is **released** (every favoriting team member away) — then it is part of the general seating pool. |
 | `x` | INTEGER | default 0 | Map-diagram coordinate (pixels of the SVG floor plan, not meters). |
 | `y` | INTEGER | default 0 | Same. |
 

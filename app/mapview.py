@@ -11,7 +11,7 @@ from datetime import date
 
 from sqlmodel import Session, select
 
-from app.assignment import _is_eligible
+from app.assignment import _is_eligible, released_hd_desks
 from app.models import Booking, BookingStatus, Desk, Employee, Mode, Reserved, Zone
 
 DESK_W, DESK_H = 60, 38
@@ -89,6 +89,8 @@ def build_map(
     for booking, employee in rows:
         occupant_by_desk[booking.desk_id] = employee
 
+    released_hd = released_hd_desks(session, day)
+
     desk_boxes: list[DeskBox] = []
     zone_desks: dict[int, list[Desk]] = {}
     for d in desks:
@@ -97,7 +99,9 @@ def build_map(
             status = "mine"
         elif occupant:
             status = "occupied"
-        elif d.reserved != Reserved.none:
+        elif d.reserved != Reserved.none and not (d.reserved == Reserved.helpdesk and d.id in released_hd):
+            # A released Help Desk desk is open to everyone, so it shows as
+            # free; only still-reserved desks keep the dashed "reserved" look.
             status = "reserved-empty"
         else:
             status = "free"

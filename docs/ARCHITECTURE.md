@@ -97,7 +97,8 @@ Supporting modules that don't own routes:
 
 - `mapview.py` — turns a day's booking state into the data the SVG map
   template draws (desk boxes, zone labels, and the four-bucket roster of
-  everyone not sitting at a desk).
+  everyone not sitting at a desk). Released Help Desk desks are reported as
+  `free` here (see `assignment.py::released_hd_desks`).
 - `dates.py` — "upcoming weekdays" and day-picker resolution, shared by the
   employee and admin day views.
 - `forms.py` — form/query parsing helpers (dates, optional ints) that turn
@@ -138,18 +139,19 @@ app/
                    optional_admin dependencies.
   admin.py         Admin panel routes (dashboard, employees, teams, desk
                    reassignment, password change) on the /admin prefix.
-  assignment.py    The desk assignment engine: resolve_day, assign_desk,
-                   promote_waitlist, admin_reassign, book_day,
-                   ensure_present_bookings (in-person auto-booking), the day
-                   lock, the per-day re-entrant locks, and the two waitlist
-                   notifications. The heart of the app — see ALGORITHM.md.
+   assignment.py    The desk assignment engine: resolve_day, assign_desk,
+                    promote_waitlist, admin_reassign, book_day,
+                    ensure_present_bookings (in-person auto-booking),
+                    released_hd_desks (Help Desk desk release), the day lock,
+                    the per-day re-entrant locks, and the two waitlist
+                    notifications. The heart of the app — see ALGORITHM.md.
   desk_requests.py "Request this desk": an employee asks the occupant of a
                    desk to cede it (DeskRequest rows, the /map/request and
                    /requests/{id} routes, the four request emails). Accepting
                    reuses assignment.admin_reassign.
-  mapview.py       Builds the occupancy data for the /map view (including the
-                   can_request flag that drives the "request this desk"
-                   button).
+   mapview.py       Builds the occupancy data for the /map view (including the
+                    can_request flag that drives the "request this desk"
+                    button, and released Help Desk desks showing as free).
   dates.py         Shared "upcoming weekdays" + day-picker helpers.
   forms.py         Form/query parsing helpers (dates, optional ints).
   templating.py    The single shared Jinja2Templates instance.

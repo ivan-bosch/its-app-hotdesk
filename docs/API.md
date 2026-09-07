@@ -164,8 +164,9 @@ Compatibility redirect: **303** to `/settings` (the profile form moved).
 Renders the profile form (`settings.html`): name, surname, team (select),
 favorite desk (picked by clicking the SVG map — HTMX + a few lines of
 vanilla JS), and an optional hire-date **proposal**. The desk picker excludes
-the boss's desk (`DESP-01`); helpdesk desks are selectable by anyone in the
-form but an ineligible choice is silently ignored on submit (below).
+the boss's desk (`DESP-01`); helpdesk desks render non-clickable for
+non-Help-Desk employees, and an ineligible choice is still silently ignored
+on submit (below, defense in depth).
 
 ### `POST /settings` and `POST /profile`
 
@@ -178,7 +179,7 @@ form but an ineligible choice is silently ignored on submit (below).
 | `name` | string, required | Trimmed. |
 | `surname` | string, required | Trimmed. |
 | `team_id` | string, required | Must reference an existing team, else **400**. |
-| `favorite_desk_id` | string, optional | `""` clears the favorite. A helpdesk desk chosen by a non-helpdesk employee is silently cleared (ineligible choice ignored rather than errored). |
+| `favorite_desk_id` | string, optional | `""` clears the favorite. A helpdesk desk chosen by a non-helpdesk employee is silently cleared (the picker renders those desks non-clickable, and the server drops the choice — ignored rather than errored). |
 | `hire_date` | string (ISO date), optional | **Proposed** hire date. Stored in `hire_date_proposed`, not `hire_date` — it only counts as seniority after an admin approves it (see [ALGORITHM.md](ALGORITHM.md) §Seniority). Setting it to the already-approved value clears the proposal. |
 | `work_pattern` | string, optional | `hibrido` (default) or `presencial`, else **400**. `presencial` employees (Help Desk, interns, …) are in the office every working day: the app books them in automatically and they never get the remote option (see [ALGORITHM.md](ALGORITHM.md) §In-person employees). Switching to `presencial` converts the employee's future `teletrabajo` bookings to `presencial` and re-plans those days. |
 
@@ -205,7 +206,10 @@ the first selectable day — never an error.
 Renders the office map (`map.html`): the SVG floor plan with every desk
 colored by status (`free`, `mine`, `occupied`, `reserved-empty`), zone
 labels, and the four-bucket roster for everyone not sitting at a desk
-(`Remote`, `On vacation`, `Waitlisted, no desk`, `Unknown`). See
+(`Remote`, `On vacation`, `Waitlisted, no desk`, `Unknown`). A Help Desk
+desk that is **released** for the day (its claimant away — see
+[ALGORITHM.md](ALGORITHM.md) §Released Help Desk desks) renders as `free`;
+only still-reserved desks keep the dashed `reserved-empty` look. See
 [ALGORITHM.md](ALGORITHM.md) §Map view rosters.
 
 ### `POST /calendar/book`
