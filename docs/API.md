@@ -56,10 +56,15 @@ Renders the login form (`login.html`).
 | Field | Type | Notes |
 | --- | --- | --- |
 | `email` | string, required | Normalized: trimmed and lowercased. |
-| `password` | string, optional (defaults to `""`) | Empty = "I don't have a password yet" → magic-link flow. |
+| `password` | string, optional (defaults to `""`) | Empty = "I don't have a password yet" → magic-link flow. Ignored when `submit=forgot`. |
+| `submit` | string, optional (defaults to `signin`) | `signin` (the Sign in button) or `forgot` (the "Forgot your password?" button — both live in this one form, so the typed email is reused). |
 
 **Behavior:**
 
+0. `submit=forgot` → skip the login entirely: `request_reset` creates a
+   magic link with `purpose="reset"` and emails it, then **200** renders
+   `check_email.html` (same anti-enumeration behavior as step 2 — unknown
+   emails get the identical page).
 1. If an `Employee` with that email exists **and** has a password set:
    - Password correct → set the `session` cookie and **303** to `/map`
      (or `/settings` if the profile is incomplete).
@@ -85,6 +90,11 @@ Creates a magic link with `purpose="reset"` and emails it; renders
 Note: it does not reveal whether the email exists — the same page is shown
 either way (the reset link, if the account exists, simply overwrites the
 password after the user sets a new one).
+
+The login page's "Forgot your password?" button no longer uses this
+endpoint: it is the `submit=forgot` button of the sign-in form (`POST
+/login`), which reuses the typed email. This endpoint remains as a plain
+API.
 
 ### `GET /auth/verify?token=…`
 

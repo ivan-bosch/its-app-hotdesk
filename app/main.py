@@ -82,14 +82,26 @@ def _session_response(employee: Employee, request: Request) -> RedirectResponse:
     return response
 
 
+def _check_email_page(request: Request, email: str):
+    return templates.TemplateResponse(request, "check_email.html", {"email": email})
+
+
 @app.post("/login", response_class=HTMLResponse)
 def login_submit(
     request: Request,
     email: str = Form(...),
     password: str = Form(""),
+    submit: str = Form("signin"),
     session: Session = Depends(get_session),
 ):
     email = email.strip().lower()
+    # The "Forgot your password?" button shares this form: it skips the login
+    # entirely and sends a reset link for the typed email (same
+    # anti-enumeration behavior as the magic-link flow — unknown emails get
+    # the same "check your email" page).
+    if submit == "forgot":
+        request_reset(session, email, base_url=str(request.base_url))
+        return _check_email_page(request, email)
     employee = session.exec(select(Employee).where(Employee.email == email)).first()
     if employee and employee.password_hash:
         if not verify_password(password, employee.password_hash, employee.password_salt):
@@ -102,14 +114,14 @@ def login_submit(
         return _session_response(employee, request)
     # New user, or legacy account without a password: magic link flow.
     request_login(session, email, base_url=str(request.base_url))
-    return templates.TemplateResponse(request, "check_email.html", {"email": email})
+    return _check_email_page(request, email)
 
 
 @app.post("/forgot", response_class=HTMLResponse)
 def forgot_submit(request: Request, email: str = Form(...), session: Session = Depends(get_session)):
     email = email.strip().lower()
     request_reset(session, email, base_url=str(request.base_url))
-    return templates.TemplateResponse(request, "check_email.html", {"email": email})
+    return _check_email_page(request, email)
 
 
 @app.get("/auth/verify")

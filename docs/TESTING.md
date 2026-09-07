@@ -28,7 +28,7 @@ non-zero if anything failed — so they can be chained in CI or a shell loop:
 for t in tests/test_*.py; do uv run --with httpx python "$t" || exit 1; done
 ```
 
-### 1.1 `tests/test_password_login.py` — 13 checks
+### 1.1 `tests/test_password_login.py` — 15 checks
 
 The employee authentication flow (magic link → forced password →
 email+password login → forgot password):
@@ -46,6 +46,8 @@ email+password login → forgot password):
 | link login con password existente → app | A `purpose="login"` link for an account that *already* has a password enters the app directly (defensive path). |
 | password vacio no es bypass ni envia link | Submitting `/login` with an empty password for an account that has one does **not** create a session, and does **not** issue a new magic link (no link-count growth). |
 | validacion fallida no consume el token | A failed set-password (400) leaves the token usable — the retry succeeds (303). |
+| login: boton forgot dentro del form de signin | The "Forgot your password?" action is a submit button *inside* the sign-in form (reusing the typed email) — there is no separate `action="/forgot"` form (which used to POST without an email and 422). |
+| POST /login submit=forgot envia link de reset (sin sesion) | `submit=forgot` skips the login and issues a `purpose="reset"` magic link, renders "Check your email", and sets no session cookie. |
 | token expirado rechazado en verify | A link whose `expires_at` is in the past → 400 at `/auth/verify`. |
 | migracion esquema antiguo | The DB was pre-created with the *old* schema (no password columns, no `magiclink.purpose`); after startup, the new columns exist. |
 

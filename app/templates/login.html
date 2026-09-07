@@ -16,10 +16,8 @@
     <form method="post" action="/login">
       <input type="email" name="email" placeholder="your.email@irbbarcelona.org" required autofocus>
       <input type="password" name="password" placeholder="password (empty = send me a setup link)">
-      <button type="submit">Sign in</button>
-    </form>
-    <form method="post" action="/forgot" style="margin-top:1em">
-      <button type="submit" style="border:0;background:none;cursor:pointer;padding:0">Forgot your password?</button>
+      <button type="submit" name="submit" value="signin">Sign in</button>
+      <button type="submit" name="submit" value="forgot" class="secondary" style="margin-top:0.5rem;">Forgot your password?</button>
     </form>
   </div>
 {% endblock %}

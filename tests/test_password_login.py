@@ -231,6 +231,36 @@ def test_failed_validation_keeps_token():
                f"1er intento (corta) -> {r1.status_code}, reintento -> {r2.status_code}")
 
 
+def test_login_page_forgot_button_in_signin_form():
+    """The forgot-password action must live INSIDE the sign-in form (the
+    email is already typed there) — not a separate form that POSTs without
+    an email (that used to 422)."""
+    with TestClient(app, follow_redirects=False, raise_server_exceptions=False) as client:
+        r = client.get("/login")
+        has_button = 'name="submit"' in r.text and 'value="forgot"' in r.text
+        no_separate_form = 'action="/forgot"' not in r.text
+        report("login: boton forgot dentro del form de signin",
+               r.status_code == 200 and has_button and no_separate_form,
+               f"boton en el form: {has_button}, sin form /forgot aparte: {no_separate_form}")
+
+
+def test_forgot_via_login_form_sends_reset_link():
+    with TestClient(app, follow_redirects=False, raise_server_exceptions=False) as client:
+        token = request_link(client, "forgotform@example.com")
+        verify(client, token)
+        assert set_password(client, token).status_code == 303
+        client.cookies.clear()
+        r = client.post("/login", data={"email": "forgotform@example.com", "submit": "forgot"})
+        with Session(engine) as s:
+            reset = s.exec(select(MagicLink).where(
+                MagicLink.email == "forgotform@example.com", MagicLink.purpose == "reset",
+            )).first()
+        no_session = not any("session=" in c for c in r.headers.get_list("set-cookie"))
+        report("POST /login submit=forgot envia link de reset (sin sesion)",
+               r.status_code == 200 and reset is not None and no_session and "Check your email" in r.text,
+               f"-> {r.status_code}, reset link en DB: {reset is not None}, sin cookie: {no_session}")
+
+
 def test_expired_token_rejected():
     from datetime import datetime, timedelta
     with TestClient(app, follow_redirects=False, raise_server_exceptions=False) as client:
@@ -272,6 +302,8 @@ if __name__ == "__main__":
         test_login_purpose_link_with_password_enters_app,
         test_empty_password_not_a_bypass,
         test_failed_validation_keeps_token,
+        test_login_page_forgot_button_in_signin_form,
+        test_forgot_via_login_form_sends_reset_link,
         test_expired_token_rejected,
         test_old_schema_migration,
     ):
