@@ -10,6 +10,10 @@
     one frees up). Each day locks at {{ "%02d"|format(lock_hour) }}:00 that
     morning — after that, the day's choice can't be changed.
   </p>
+  <p class="muted">
+    In-person employees are marked in office automatically every working day.
+    Vacation days are managed from the <a href="/vacation">Vacation page</a>.
+  </p>
   <h2 style="margin-top:1.25rem;">This week</h2>
   {% for day in days %}
     {% with booking = bookings.get(day), locked = day in locked_days %}

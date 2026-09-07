@@ -71,9 +71,12 @@ dr.send_email = _capture_email
 
 
 def unlocked_days():
+    """Unlocked days in the booking window. After the 08:00 lock of a
+    weekday, today is locked and only 4 days remain, so the suite must be
+    runnable with 4 (tests share days instead of needing 5 distinct ones)."""
     days = [d for d in upcoming_weekdays() if not is_day_locked(d)]
-    if len(days) < 5:
-        raise RuntimeError(f"need 5 unlocked days in window, got {len(days)}")
+    if len(days) < 4:
+        raise RuntimeError(f"need 4 unlocked days in window, got {len(days)}")
     return days
 
 
@@ -267,7 +270,7 @@ def test_cannot_request_ineligible_desk():
     hd01 = desk_id("HD-01")
     # occupant is a Help Desk member (team 5) with HD-01 as favorite, so the
     # desk is actually occupied by them — the 400 must come from eligibility
-    day, occ, req, _ = setup_pair(days, 4, "rq6", occupant_favorite=str(hd01), occupant_team_id="5")
+    day, occ, req, _ = setup_pair(days, 3, "rq6", occupant_favorite=str(hd01), occupant_team_id="5")
     with TestClient(app, follow_redirects=False, raise_server_exceptions=False) as client:
         login_employee(client, req)
         r = make_request(client, day, hd01)
@@ -289,7 +292,7 @@ def test_cannot_request_own_desk():
 
 def test_cannot_request_free_desk():
     days = unlocked_days()
-    day, occ, req, _ = setup_pair(days, 4, "rq8")
+    day, occ, req, _ = setup_pair(days, 3, "rq8")
     with Session(engine) as s:
         taken = {b.desk_id for b in s.exec(select(Booking).where(
             Booking.day == day, Booking.status == "assigned")).all()}

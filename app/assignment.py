@@ -38,7 +38,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
 from app.email import send_email
-from app.models import Booking, BookingStatus, Desk, Employee, Mode, Reserved, Team
+from app.models import Booking, BookingStatus, Desk, Employee, Mode, Reserved, Team, WorkPattern
 
 BOSS_DESK_CODE = "DESP-01"
 MAX_ASSIGN_RETRIES = 3
@@ -458,6 +458,39 @@ def book_day(session: Session, employee: Employee, day: date, mode: Mode) -> Boo
     """Serialized same-day wrapper around `_book_day` (see `_day_lock`)."""
     with _day_lock(day):
         return _book_day(session, employee, day, mode)
+
+
+def ensure_present_bookings(session: Session, day: date) -> None:
+    """In-person employees (`WorkPattern.presencial`) are in the office every
+    working day by declaration, not by a daily action: create the missing
+    "in office" bookings for `day` and re-plan the day once if anything was
+    created.
+
+    Called from every render of a day (map, calendar, admin views), so an
+    in-person employee shows up with a desk without ever touching the app.
+    Skips employees with an incomplete profile (no team -> cannot be seated)
+    and anyone already booked that day — including pre-marked vacations,
+    which win over the automatic in-office declaration.
+
+    Deliberately exempt from the day lock: this is a standing declaration,
+    not a last-minute change. Without the exemption, an in-person employee
+    who never opens the app (the common help-desk case) would never get a
+    desk, because their first booking would always fall after 08:00."""
+    present = session.exec(
+        select(Employee).where(Employee.work_pattern == WorkPattern.presencial)
+    ).all()
+    created = False
+    for employee in present:
+        if not employee.profile_complete:
+            continue
+        if _existing_booking(session, employee, day) is not None:
+            continue
+        session.add(Booking(employee_id=employee.id, day=day, mode=Mode.presencial))
+        created = True
+    if created:
+        session.commit()
+        session.expire_all()
+        resolve_day(session, day)
 
 
 def _book_day(session: Session, employee: Employee, day: date, mode: Mode) -> Booking:

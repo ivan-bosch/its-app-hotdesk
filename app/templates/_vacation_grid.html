@@ -1,0 +1,55 @@
+{# Expects: month_first, month_label, days, prev_month, next_month, today #}
+<div id="vacation-grid" class="card" style="margin-top:0.75rem;">
+  <p style="margin:0 0 0.75rem;">
+    {% if prev_month %}<a href="/vacation?month={{ prev_month }}" style="text-decoration:none; padding:0 0.5rem;" aria-label="Previous month">&larr;</a>{% endif %}
+    <strong style="margin:0 0.5rem;">{{ month_label }}</strong>
+    {% if next_month %}<a href="/vacation?month={{ next_month }}" style="text-decoration:none; padding:0 0.5rem;" aria-label="Next month">&rarr;</a>{% endif %}
+  </p>
+  <div class="table-wrap">
+    <table style="table-layout:fixed;">
+      <thead>
+        <tr>
+          {% for h in ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}
+            <th style="font-weight:normal; font-size:0.8rem; padding:0.25rem;">{{ h }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% set ns = namespace(cells=[]) %}
+        {% for _ in range(month_first.weekday()) %}{% set ns.cells = ns.cells + [''] %}{% endfor %}
+        {% for item in days %}{% set ns.cells = ns.cells + [item] %}{% endfor %}
+        {% for _ in range((7 - (ns.cells | length) % 7) % 7) %}{% set ns.cells = ns.cells + [''] %}{% endfor %}
+        {% for i in range(0, ns.cells | length, 7) %}
+          <tr>
+            {% for cell in ns.cells[i:i + 7] %}
+              {% if cell == '' %}
+                <td></td>
+              {% elif cell.kind in ('past', 'weekend', 'locked') %}
+                <td class="muted" style="text-align:center; padding:0.35rem;">{{ cell.day.day }}</td>
+              {% else %}
+                {% set styles = [] %}
+                {% if cell.day == today %}{% set styles = styles + ['outline:2px solid #2f6fed'] %}{% endif %}
+                {% if cell.is_vacation %}
+                  {% set styles = styles + ['background:#2f6fed', 'color:#ffffff', 'border-color:#2f6fed'] %}
+                {% endif %}
+                <td style="text-align:center; padding:0.2rem;">
+                  <button type="button"
+                    {% if styles %}style="{{ styles|join('; ') }};"{% endif %}
+                    hx-post="/vacation/toggle" hx-target="#vacation-grid" hx-swap="innerHTML"
+                    hx-vals='{"day": "{{ cell.day.isoformat() }}"}'
+                    title="{{ 'Unmark' if cell.is_vacation else 'Mark' }} {{ cell.day.isoformat() }} {{ 'off' if cell.is_vacation else 'as vacation' }}">
+                    {{ cell.day.day }}
+                  </button>
+                </td>
+              {% endif %}
+            {% endfor %}
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="muted" style="margin-top:0.5rem;">
+    <span style="display:inline-block; min-width:1.4rem; text-align:center; background:#2f6fed; color:#ffffff; border-radius:0.25rem;">&#160;</span>
+    = on vacation &nbsp;·&nbsp; the outlined day is today
+  </p>
+</div>

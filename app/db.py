@@ -27,6 +27,7 @@ def _ensure_columns() -> None:
             ("employee", "password_salt", "ALTER TABLE employee ADD COLUMN password_salt VARCHAR"),
             ("employee", "hire_date_proposed", "ALTER TABLE employee ADD COLUMN hire_date_proposed DATE"),
             ("magiclink", "purpose", "ALTER TABLE magiclink ADD COLUMN purpose VARCHAR NOT NULL DEFAULT 'login'"),
+            ("employee", "work_pattern", "ALTER TABLE employee ADD COLUMN work_pattern VARCHAR NOT NULL DEFAULT 'hibrido'"),
         ):
             cols = {row[1] for row in conn.exec_driver_sql(f"PRAGMA table_info({table})")}
             if column not in cols:

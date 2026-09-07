@@ -7,6 +7,12 @@ whether they're coming into the office or working remotely, and the app
 spot and being close to their team. Every change re-plans the whole day from
 scratch; there is no batch job and no pending state.
 
+Two standing patterns on top of the day-by-day choice: employees whose work
+pattern is **in person** (Help Desk, interns, …) are booked in automatically
+every working day — no daily action, no remote option — and everyone manages
+**vacation days** on a year-long calendar that applies the marks automatically
+when the day arrives.
+
 ## Documentation
 
 | Document | Contents |
@@ -43,6 +49,10 @@ pipeline.
 - **Desk requests**: from the map, an employee can "request this desk" on an
   occupied desk; the occupant gets an email with a link to accept or decline.
   Accepting seats the requester there and re-seats the occupant.
+- **Work pattern** (`/settings`): hybrid (choose per day) or in person
+  (auto-booked in office every working day, no remote option).
+- **Vacation** (`/vacation`): a month-grid calendar for the current year;
+  tapping a day saves the mark immediately, even months ahead.
 
 ## Quickstart
 
@@ -118,13 +128,14 @@ docs/              This documentation
 ```
 
 The landing page (`/`) is the office map for today; the calendar is reached
-from the "Plan your week" button. Profile editing lives under `/settings`
-(`/profile` still redirects there). The map uses a fixed light "paper"
-palette so it stays legible in both light and dark OS themes.
+from the "Plan your week" button; vacation days live under `/vacation`.
+Profile editing — including the work pattern (hybrid / in person) — lives
+under `/settings` (`/profile` still redirects there). The map uses a fixed
+light "paper" palette so it stays legible in both light and dark OS themes.
 
 No frontend build or JS framework: the only real interactivity (toggle
-in-office/remote without reloading, clicking the map to pick a favorite) is
-HTMX plus a bit of vanilla JS in `settings.html`.
+in-office/remote without reloading, marking vacation days, clicking the map
+to pick a favorite) is HTMX plus a bit of vanilla JS in `settings.html`.
 
 ## Admin panel (`/admin`)
 

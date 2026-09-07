@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+  {% include "_nav.html" %}
+  <h1>Vacation</h1>
+  <p class="muted">
+    Tap the days you'll be away — they're saved immediately, even months ahead,
+    and show up on the map automatically when the day arrives. Only the current
+    year can be edited; past days and weekends stay closed.
+  </p>
+  {% include "_vacation_grid.html" %}
+{% endblock %}

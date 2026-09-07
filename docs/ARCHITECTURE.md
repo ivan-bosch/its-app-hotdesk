@@ -114,8 +114,9 @@ Supporting modules that don't own routes:
 ```
 app/
   models.py        SQLModel tables (Employee, Desk, Zone, Team, Booking,
-                   MagicLink, AdminUser) and the three enums (Reserved, Mode,
-                   BookingStatus). Pure data definitions — no logic.
+                   DeskRequest, MagicLink, AdminUser) and the enums
+                   (Reserved, Mode, WorkPattern, BookingStatus,
+                   DeskRequestStatus). Pure data definitions — no logic.
   db.py            SQLite engine (path from HOTDESK_DB), get_session()
                    dependency, init_db() (create_all + column migration +
                    seed), and the seed data: 15 desks digitized from the real
@@ -138,8 +139,9 @@ app/
   admin.py         Admin panel routes (dashboard, employees, teams, desk
                    reassignment, password change) on the /admin prefix.
   assignment.py    The desk assignment engine: resolve_day, assign_desk,
-                   promote_waitlist, admin_reassign, book_day, the day lock,
-                   the per-day re-entrant locks, and the two waitlist
+                   promote_waitlist, admin_reassign, book_day,
+                   ensure_present_bookings (in-person auto-booking), the day
+                   lock, the per-day re-entrant locks, and the two waitlist
                    notifications. The heart of the app — see ALGORITHM.md.
   desk_requests.py "Request this desk": an employee asks the occupant of a
                    desk to cede it (DeskRequest rows, the /map/request and
@@ -153,7 +155,8 @@ app/
   templating.py    The single shared Jinja2Templates instance.
   main.py          The FastAPI app object and the employee-facing routes
                    (login, set-password, forgot, auth/verify, settings,
-                   calendar, map, booking). Includes the admin router.
+                   calendar, map, booking, the year-long vacation calendar).
+                   Includes the admin router.
   templates/       Jinja2 + HTMX. _office_landmarks.html holds the SVG floor
                    plan; admin_*.html are the admin panel pages.
 ```
@@ -219,8 +222,38 @@ Browser ──POST /requests/{id}/decide {action}──▶ desk_requests.py::req
      is seated at the desk, the occupant is bumped and re-seated surgically
      (promote_waitlist). Bypasses the day lock on purpose (mutual
      agreement). Request → accepted; requester emailed.
-  3. decline: request → declined; requester emailed. Nobody moves.
+   3. decline: request → declined; requester emailed. Nobody moves.
+ ```
+
+### 5.5 An employee marks vacation days / is booked in automatically
+
 ```
+Vacation (year-long calendar):
+Browser ──GET /vacation?month=YYYY-MM──▶ main.py::vacation_view
+   1. current_employee. Month validated: must be the current year, else 400.
+   2. Render the month grid (_vacation_grid.html): past days, weekends and
+      today-after-lock are muted; every other weekday is a toggle button.
+
+Browser ──POST /vacation/toggle {day}──▶ main.py::vacation_toggle
+   1. Validate: weekday of the current year, day >= today (400s); today at
+      or past the lock hour → 403.
+   2. Toggle: no booking → create Booking(mode=vacation); vacation booking
+      → delete it (a presencial-pattern employee with a window-day gets the
+      automatic in-office booking back, which re-plans the day);
+      presencial booking → becomes vacation, freed desk re-plans the day.
+      Retries on IntegrityError like book_day.
+   3. Return the month grid (HTMX swaps it in). Marks outside the 5-day
+      window are stored as-is; they apply when the day reaches the window.
+
+In-person auto-booking (no browser involved):
+   Every render of a day (calendar, map, admin dashboard, admin reassign)
+   and every book_day first runs
+   assignment.py::ensure_present_bookings(session, day): create the missing
+   "in office" bookings for work_pattern=presencial employees with complete
+   profiles (skipping anyone already booked — vacation wins) and re-plan the
+   day once if anything was created. Lock-exempt: a standing declaration,
+   not a last-minute change.
+ ```
 
 ### 5.2 A first-time employee logs in
 

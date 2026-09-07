@@ -170,6 +170,7 @@ form but an ineligible choice is silently ignored on submit (below).
 | `team_id` | string, required | Must reference an existing team, else **400**. |
 | `favorite_desk_id` | string, optional | `""` clears the favorite. A helpdesk desk chosen by a non-helpdesk employee is silently cleared (ineligible choice ignored rather than errored). |
 | `hire_date` | string (ISO date), optional | **Proposed** hire date. Stored in `hire_date_proposed`, not `hire_date` — it only counts as seniority after an admin approves it (see [ALGORITHM.md](ALGORITHM.md) §Seniority). Setting it to the already-approved value clears the proposal. |
+| `work_pattern` | string, optional | `hibrido` (default) or `presencial`, else **400**. `presencial` employees (Help Desk, interns, …) are in the office every working day: the app books them in automatically and they never get the remote option (see [ALGORITHM.md](ALGORITHM.md) §In-person employees). Switching to `presencial` converts the employee's future `teletrabajo` bookings to `presencial` and re-plans those days. |
 
 **Behavior:** saves the profile, **303** to `/map`.
 
@@ -206,7 +207,7 @@ labels, and the four-bucket roster for everyone not sitting at a desk
 | Field | Type | Notes |
 | --- | --- | --- |
 | `day` | string (ISO date), required | Must be within the upcoming-weekdays window, else **400**. |
-| `mode` | string, required | Must be `presencial`, `teletrabajo`, or `vacation`, else **400**. |
+| `mode` | string, required | Must be `presencial`, `teletrabajo`, or `vacation`, else **400**. `teletrabajo` for a `presencial`-pattern employee → **400** (they have no remote days). `vacation` is still accepted for compatibility, but the UI manages vacation days through `POST /vacation/toggle` — there is no per-day vacation button anymore. |
 
 **Behavior:** calls `book_day` (see [ALGORITHM.md](ALGORITHM.md)):
 
@@ -217,6 +218,60 @@ labels, and the four-bucket roster for everyone not sitting at a desk
 
 For `presencial` the response may show an assigned desk code or
 "waitlisted"; for `teletrabajo`/`vacation` it shows the mode with no desk.
+
+---
+
+## Vacation (year-long calendar)
+
+Vacation days are managed on a month-grid calendar covering the **current
+year**, not per day in the week planner. A marked day is a `Booking` row with
+`mode=vacation`; marks outside the 5-day booking window are stored as-is and
+simply apply when the day reaches the window (map, algorithm and admin views
+all read the same rows).
+
+### `GET /vacation?month=YYYY-MM`
+
+**Auth:** employee.
+
+**Query params:** `month` (optional `YYYY-MM`). Missing → current month.
+Malformed, or a month outside the current year → **400** "Only the current
+year can be edited".
+
+Renders `vacation.html`: a 7-column month grid. Each cell shows its
+editability:
+
+- `past` days (before today) and `weekend` days: rendered muted, not
+  toggleable.
+- `today` at/past `BOOKING_LOCK_HOUR`: rendered muted (locked).
+- everything else: a toggle button (HTMX, posts to `/vacation/toggle`,
+  swaps the whole grid). Marked days are highlighted; today is outlined.
+
+Month navigation (`‹`/`›`) is clamped to the current year: January has no
+previous month, December has no next one.
+
+### `POST /vacation/toggle`
+
+**Auth:** employee.
+
+**Form fields:**
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `day` | string (ISO date), required | Must be a weekday of the current year, `day >= today`, else **400** (weekends, past days and other years are rejected). `today` at/past the lock hour → **403**. |
+
+**Behavior:** toggles the day:
+
+- No booking yet → creates a `Booking(mode=vacation)`.
+- Booking is `vacation` → deletes it. A `presencial`-pattern employee with a
+  window-day falls back to the automatic in-office booking (which re-plans
+  the day).
+- Booking is `presencial` (window day) → becomes `vacation`, the freed desk
+  re-plans the day. A `teletrabajo` booking just changes mode (no desk was
+  held).
+
+Success → **200** returning `_vacation_grid.html` for that day's month (HTMX
+swaps it into the page). Concurrency races retry up to
+`MAX_ASSIGN_RETRIES`; after that **503** "please retry".
 
 ---
 

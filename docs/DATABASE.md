@@ -35,6 +35,7 @@ Defined in `app/models.py`; stored as their string values.
 | --- | --- | --- |
 | `Reserved` | `none`, `boss`, `helpdesk` | `Desk.reserved` |
 | `Mode` | `presencial`, `teletrabajo`, `vacation` | `Booking.mode` |
+| `WorkPattern` | `hibrido`, `presencial` | `Employee.work_pattern` — standing work modality (see [ALGORITHM.md](ALGORITHM.md) §In-person employees) |
 | `BookingStatus` | `assigned`, `waitlisted` | `Booking.status` (nullable — see below) |
 | `DeskRequestStatus` | `pending`, `accepted`, `declined`, `expired` | `DeskRequest.status` |
 
@@ -92,6 +93,7 @@ coordinates (see [ALGORITHM.md](ALGORITHM.md)).
 | `is_boss` | BOOLEAN | default `false` | Grants exclusive access to `DESP-01`. |
 | `hire_date` | DATE | nullable | **Approved** hire date. The only value the algorithm uses for seniority. |
 | `hire_date_proposed` | DATE | nullable | Self-proposed hire date from `/settings`, pending admin approval. Never used by the algorithm until approved. |
+| `work_pattern` | VARCHAR | default `'hibrido'` | `WorkPattern` enum. `presencial` employees are auto-booked in office every working day (no remote option); `hibrido` employees choose per day. |
 | `password_hash` | VARCHAR | nullable | PBKDF2-HMAC-SHA256 hex digest. NULL = no password set yet (magic-link flow still applies). |
 | `password_salt` | VARCHAR | nullable | 16-byte hex salt. |
 | `created_at` | DATETIME | default `utcnow` | |
@@ -212,6 +214,7 @@ are missing:
 | `employee` | `password_salt` | `ALTER TABLE employee ADD COLUMN password_salt VARCHAR` |
 | `employee` | `hire_date_proposed` | `ALTER TABLE employee ADD COLUMN hire_date_proposed DATE` |
 | `magiclink` | `purpose` | `ALTER TABLE magiclink ADD COLUMN purpose VARCHAR NOT NULL DEFAULT 'login'` |
+| `employee` | `work_pattern` | `ALTER TABLE employee ADD COLUMN work_pattern VARCHAR NOT NULL DEFAULT 'hibrido'` |
 
 This is how databases created by older versions of the app are upgraded in
 place. The test suites deliberately pre-create a database with the *old*

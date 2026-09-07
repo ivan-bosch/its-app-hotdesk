@@ -5,7 +5,7 @@
   <div class="table-wrap">
   <table>
     <thead>
-      <tr><th>Email</th><th>Name</th><th>Team</th><th>Boss</th><th>Hire date</th><th></th></tr>
+      <tr><th>Email</th><th>Name</th><th>Team</th><th>Pattern</th><th>Boss</th><th>Hire date</th><th></th></tr>
     </thead>
     <tbody>
       {% for e in employees %}
@@ -13,6 +13,7 @@
           <td>{{ e.email }}</td>
           <td>{{ e.name or '' }} {{ e.surname or '' }}</td>
           <td>{{ teams_by_id[e.team_id].name if e.team_id in teams_by_id else '—' }}</td>
+          <td>{{ 'In person' if e.work_pattern.value == 'presencial' else 'Hybrid' }}</td>
           <td>{{ 'Yes' if e.is_boss else '' }}</td>
           <td>
             {{ e.hire_date.isoformat() if e.hire_date else '—' }}

@@ -17,7 +17,7 @@ from app.admin_auth import (
     current_admin,
     make_admin_session_cookie,
 )
-from app.assignment import admin_reassign, promote_waitlist
+from app.assignment import admin_reassign, ensure_present_bookings, promote_waitlist
 from app.dates import resolve_target_day, upcoming_weekdays
 from app.db import get_session
 from app.forms import parse_date, parse_day, parse_optional_int
@@ -77,6 +77,7 @@ def admin_dashboard(
     session: Session = Depends(get_session),
 ):
     today = date.today()
+    ensure_present_bookings(session, today)  # in-person employees count in today's stats
     today_bookings = session.exec(select(Booking).where(Booking.day == today)).all()
     stats = {
         "assigned": sum(1 for b in today_bookings if b.status == BookingStatus.assigned),
@@ -325,6 +326,7 @@ def admin_reassign_form(
 ):
     days = upcoming_weekdays()
     target_day = resolve_target_day(day, days)
+    ensure_present_bookings(session, target_day)
 
     employees = session.exec(select(Employee)).all()
     bookings = {b.employee_id: b for b in session.exec(select(Booking).where(Booking.day == target_day)).all()}

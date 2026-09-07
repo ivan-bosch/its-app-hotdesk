@@ -7,7 +7,7 @@ them, the design of the harness, and how to add a test.
 
 ## 1. The suites
 
-Four end-to-end suites live in `tests/`. Each one drives the **real**
+Five end-to-end suites live in `tests/`. Each one drives the **real**
 FastAPI app against a **real** SQLite database — no mocks, no stubs, no
 pytest. They are plain Python scripts with their own tiny runner:
 
@@ -15,6 +15,8 @@ pytest. They are plain Python scripts with their own tiny runner:
 uv run --with httpx python tests/test_password_login.py
 uv run --with httpx python tests/test_seniority_flow.py
 uv run --with httpx python tests/test_home_settings.py
+uv run --with httpx python tests/test_desk_requests.py
+uv run --with httpx python tests/test_work_patterns.py
 ```
 
 `--with httpx` is needed because `fastapi.testclient.TestClient` requires
@@ -94,6 +96,33 @@ The "request this desk" / cede flow:
 | aceptar funciona con el dia bloqueado | Accepting still works when `is_day_locked` is forced true (mutual agreement bypasses the lock). |
 | mapa: enlace de peticion en escritorio ajeno, no en el propio | The map renders the request form on the occupant's desk but not on the viewer's own desk. |
 | migracion esquema antiguo | The suite's DB starts with the pre-migration schema; the new `deskrequest` table is created by `create_all` on startup. |
+
+The suite is time-robust: after the 08:00 lock of a weekday, today is
+locked and the window holds only 4 unlocked days, so the tests share days
+instead of requiring 5 distinct ones (the "accept after the lock" check
+simulates the lock by patching `is_day_locked`).
+
+### 1.5 `tests/test_work_patterns.py` — 15 checks
+
+Work pattern (hybrid / in-person) and the year-long vacation calendar:
+
+| Check | What it proves |
+| --- | --- |
+| settings muestra work pattern (híbrido por defecto) | The settings form renders the `work_pattern` select with `hibrido` selected by default. |
+| work_pattern=presencial persiste | `POST /settings` stores `presencial` on the employee row. |
+| presencial auto-marcado al ver el mapa | Viewing the map auto-creates an in-office booking for a `presencial` employee. |
+| presencial auto-marcado con escritorio | The auto-booking is seated by the normal resolver (`assigned` + a desk). |
+| vacación marcada no la pisa el auto-marking | A pre-marked vacation is never overridden by the automatic booking. |
+| híbrido->presencial convierte el remote a in office | Switching patterns converts future remote bookings to in office (and seats them). |
+| remote bloqueado para presencial (400) | `POST /calendar/book` with `teletrabajo` is rejected for a `presencial` employee. |
+| /vacation renderiza la cuadrícula del mes | The month grid renders for the current month. |
+| toggle crea vacación fuera de la ventana | Toggling a weekday outside the 5-day window creates a `vacation` booking (it applies when the day reaches the window). |
+| toggle off borra la vacación | Toggling again deletes the booking. |
+| toggle rechaza fin de semana y pasado | Weekends and past days → 400. |
+| calendario sin botón Vacation (In office/Remote quedan) | The week planner no longer offers a per-day Vacation button; the other two modes remain. |
+| fila presencial: 'automatic' y sin botones | A `presencial` employee's day row shows "In office (automatic)" with no mode buttons. |
+| calendario muestra 'On vacation' en el día marcado | A marked vacation day renders "On vacation" in the week planner. |
+| mes fuera del año → 400, mes del año → 200 | Month navigation is clamped to the current year. |
 
 ---
 

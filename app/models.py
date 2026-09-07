@@ -16,6 +16,15 @@ class Mode(str, Enum):
     vacation = "vacation"
 
 
+class WorkPattern(str, Enum):
+    """Standing work modality. `presencial` employees (help desk, interns, ...)
+    are in the office every working day: the app books them in automatically
+    and they never have the remote option (see assignment.ensure_present_bookings).
+    `hibrido` employees choose in office / remote per day as before."""
+    hibrido = "hibrido"
+    presencial = "presencial"
+
+
 class BookingStatus(str, Enum):
     assigned = "assigned"
     waitlisted = "waitlisted"
@@ -67,6 +76,7 @@ class Employee(SQLModel, table=True):
     is_boss: bool = Field(default=False)
     hire_date: date | None = Field(default=None)
     hire_date_proposed: date | None = Field(default=None)
+    work_pattern: WorkPattern = Field(default=WorkPattern.hibrido)
     password_hash: str | None = None
     password_salt: str | None = None
     created_at: datetime = Field(default_factory=datetime.utcnow)

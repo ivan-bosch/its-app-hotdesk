@@ -23,7 +23,7 @@ that day:
 Because the algorithm is **deterministic** (same set of declarations in →
 same assignment out), re-running it on every change is safe and cheap: with
 15 desks and a few dozen employees, a full recalc is a handful of SQL
-queries and a sort (see §11 for complexity).
+queries and a sort (see §14 for complexity).
 
 ### Why not a daily batch?
 
@@ -53,6 +53,11 @@ From that moment, employees can no longer change that day's choice — in
 office, remote, and vacation are all frozen (`book_day` raises
 `DayLockedError` → HTTP 403). Future days stay open. Admins can still
 override assignments after the lock (§7).
+
+Two deliberate exemptions: accepting a desk request bypasses the lock (a
+cede is a mutual agreement — see the desk-requests routes), and the
+in-person auto-booking of §9 bypasses it too (a standing declaration, not a
+last-minute change).
 
 The lock exists so that morning-of recalculations don't pull the rug out
 from under people who are already on their way in. Note the asymmetry: the
@@ -84,7 +89,7 @@ extra rules:
 ## 4. `resolve_day()`: the assignment engine
 
 `resolve_day(session, day)` is called after every booking change that
-affects seating. It runs under the per-day lock (§10) and recomputes every
+affects seating. It runs under the per-day lock (§11) and recomputes every
 presencial assignment for `day` from scratch.
 
 ### Pseudocode
@@ -300,13 +305,66 @@ deliberately silent: you see your current desk when you open the app.
 
 ---
 
-## 9. Vacation mode
+## 9. In-person employees (work pattern)
+
+`Employee.work_pattern` is a standing declaration about *how* someone works,
+separate from the per-day `Booking.mode`:
+
+| Pattern | Meaning |
+| --- | --- |
+| `hibrido` (default) | Chooses in office / remote per day in the calendar, as before. |
+| `presencial` | In the office every working day (the usual case for Help Desk and interns). No remote option, no daily action. |
+
+### Auto-booking (`ensure_present_bookings`)
+
+Every render of a day — the employee's own calendar, the map, the admin
+dashboard, the admin reassign view, and every booking that triggers a
+re-plan — first runs `ensure_present_bookings(session, day)`:
+
+1. Select all employees with `work_pattern = presencial` and a complete
+   profile (name + surname + team; without a team there is nothing to seat
+   them near).
+2. For each one without a booking for `day`, create a `presencial` booking.
+3. If anything was created, run one `resolve_day(day)` — the automatic
+   bookings are seated by the exact same rules as a manual "in office"
+   click.
+
+Consequences:
+
+- An in-person employee shows up on the map, the roster and the admin
+  dashboard **without ever opening the app** — the common help-desk case.
+- A pre-marked **vacation wins over the automatic booking**: the helper
+  skips anyone already booked that day, so a `vacation` booking is never
+  overridden (and unmarking a vacation day drops the automatic booking
+  straight back in).
+- **Lock exemption.** The auto-booking bypasses the day lock on purpose: it
+  is a standing declaration, not a last-minute change. Without the
+  exemption an in-person employee who never opens the app would never get a
+  desk, because their first booking would always arrive after 08:00. The
+  same principle applies to switching *to* `presencial` from the settings
+  form: future `teletrabajo` bookings are converted to `presencial` and
+  those days re-plan, even if locked.
+- `POST /calendar/book` with `mode=teletrabajo` is rejected with **400**
+  for in-person employees (defense in depth — their UI has no such button).
+- Switching *back* to `hibrido` undoes nothing: existing in-office bookings
+  stay, and the auto-booking simply stops for future days.
+
+---
+
+## 10. Vacation mode
 
 `Mode.vacation` is **functionally identical to `teletrabajo`** (remote): no
 desk is ever assigned, and switching to it frees any desk you hold that day
 (triggering a full recalc, same as switching to remote). It exists as a
 separate value purely for labeling — the map view shows "on vacation" apart
 from "working remotely".
+
+Vacation days are managed on the **year-long calendar page**
+(`/vacation?month=YYYY-MM`, see [API.md](API.md) §Vacation), not per day in
+the week planner: the per-day Vacation button is gone. A mark is a `vacation`
+booking row, and marks outside the 5-day booking window are stored as-is —
+they simply apply when the day reaches the window, because the map, the
+resolver and the admin views all read the same rows.
 
 ### Map view rosters
 
@@ -324,7 +382,7 @@ Every employee appears in exactly one place: a desk box, or one bucket.
 
 ---
 
-## 10. Race conditions and concurrency
+## 11. Race conditions and concurrency
 
 Two people can click at the same time. Three layers keep that from ending
 in two people assigned to the same desk:
@@ -371,7 +429,7 @@ containers. Run one process (see [ARCHITECTURE.md](ARCHITECTURE.md) §6 and
 
 ---
 
-## 11. Worked examples
+## 12. Worked examples
 
 Desk coordinates from the seed (top row: P01 (200,50), P02 (280,50),
 P03 (360,50); "by the office" row: P07 (200,250), P08 (280,250)).
@@ -446,7 +504,7 @@ Nobody else moved: the override was surgical.
 
 ---
 
-## 12. Invariants
+## 13. Invariants
 
 The system maintains these at all times (enforced by the combination of the
 algorithm and the DB constraints):
@@ -465,12 +523,17 @@ algorithm and the DB constraints):
 6. **Seniority is scoped:** it only decides contested favorites in step 2.
    It plays no role in team clustering, late arrivals, or waitlist
    promotion, all of which are purely arrival-order based.
-7. **Arrival order is preserved:** waitlist promotion and step-3 processing
-   both walk `created_at` ascending.
+ 7. **Arrival order is preserved:** waitlist promotion and step-3 processing
+    both walk `created_at` ascending.
+ 8. **In-person means in office:** a `work_pattern = presencial` employee who
+    has a complete profile never has a `teletrabajo` booking, and — once any
+    view or booking touches a day — has a `presencial` booking for it
+    unless they marked that day as `vacation` (vacation wins over the
+    automatic booking).
 
 ---
 
-## 13. Complexity
+## 14. Complexity
 
 Per `resolve_day` invocation, with `E` presencial declarations and `D` desks
 (15 in the seed):
@@ -487,11 +550,11 @@ Per `resolve_day` invocation, with `E` presencial declarations and `D` desks
 This is why "re-plan the whole day on every change" is free at this scale.
 The algorithm would stop being cheap around the hundreds of desks /
 hundreds of employees; at that point a batch or a proper matching solver
-would be the next step (see §14).
+would be the next step (see §15).
 
 ---
 
-## 14. What the algorithm deliberately does NOT do
+## 15. What the algorithm deliberately does NOT do
 
 - **No daily batch / scheduler** — assignment is instant, on every change.
 - **No probabilistic seniority** — an earlier version had a capped-% chance
